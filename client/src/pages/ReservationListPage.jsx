@@ -379,8 +379,8 @@ export default function ReservationListPage() {
                         alignItems="flex-start"
                         sx={{
                           bgcolor: isCurrentUser 
-                            ? (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light'
-                            : (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+                            ? (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.300'
+                            : (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.200',
                           borderRadius: 1,
                           mb: 1
                         }}
