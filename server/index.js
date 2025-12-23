@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const compression = require("compression");
 const mongoose = require("mongoose");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -18,7 +19,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Serve uploaded files
 app.use(express.static("public"));
+
+// Serve built React app (for production)
+app.use(express.static(path.join(__dirname, "../client/dist")));
 
 // Routes
 const authRoutes = require("./routes/auth");
@@ -54,9 +59,35 @@ mongoose.connection.on("error", (err) => {
   console.error("MongoDB connection error:", err);
 });
 
-// Basic test route - redirect to frontend
+// Basic test route
 app.get("/", (req, res) => {
-  res.redirect("https://beds4crew-gqib.onrender.com/");
+  res.json({ message: "Welcome to Beds4Crew API" });
+  // res.redirect("https://beds4crew-gqib.onrender.com/");
+});
+
+// SPA fallback - serve index.html for all non-API routes
+// This MUST come after all API routes and before the 404 handler
+app.get("*", (req, res, next) => {
+  // Only handle non-API routes
+  if (req.path.startsWith("/api/")) {
+    return next();
+  }
+  
+  // Try to serve from public/uploads for image requests
+  if (req.path.startsWith("/uploads/")) {
+    return next();
+  }
+  
+  // For all other routes, serve index.html (for React Router)
+  const indexPath = path.join(__dirname, "../client/dist/index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      // If client build doesn't exist, return a helpful message
+      res.status(404).json({ 
+        message: "Client app not built. Run 'npm run build' in the client directory." 
+      });
+    }
+  });
 });
 
 // 404 handler
