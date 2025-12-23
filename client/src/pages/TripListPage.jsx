@@ -4,22 +4,27 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, List, 
   ListItem, ListItemText, Divider 
 } from "@mui/material";
+import { LoadingState, NoTrips } from "../components/EmptyState";
 import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
 
 export default function TripListPage() {
   const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadBookings();
   }, []);
 
   const loadBookings = () => {
+    setLoading(true);
     fetchWithAuth(`${API_URL}/bookings/guest`)
       .then(res => res.json())
-      .then(setBookings);
+      .then(setBookings)
+      .finally(() => setLoading(false));
   };
 
   const handleOpenDialog = async (bookingId) => {
@@ -39,7 +44,6 @@ export default function TripListPage() {
     });
     
     setMessageText("");
-    // Reload the booking to get updated messages
     const res = await fetchWithAuth(`${API_URL}/bookings/${selectedBooking._id}`);
     const updated = await res.json();
     setSelectedBooking(updated);
@@ -66,64 +70,81 @@ export default function TripListPage() {
     }
   };
 
+  if (loading) {
+    return <LoadingState message="Loading your trips..." />;
+  }
+
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", mt: 4, px: 2 }}>
-      <Typography variant="h4" mb={2}>My Trips</Typography>
-      <Grid container spacing={2}>
-        {bookings.map(bk => (
-          <Grid item xs={12} sm={6} md={4} key={bk._id}>
-            <Card>
-              <CardMedia
-                component="img"
-                height="140"
-                image={`${BASE_URL}${bk.property.images?.[0]?.path || bk.property.images?.[0]}`}
-                alt={bk.property.title}
-              />
-              <CardContent>
-                <Typography variant="h6" gutterBottom>{bk.property.title}</Typography>
-                <Typography variant="body2" color="text.secondary">{bk.property.address}</Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  Total: ${bk.totalPrice}
-                </Typography>
-                <Chip 
-                  label={bk.status.toUpperCase()} 
-                  color={getStatusColor(bk.status)} 
-                  size="small" 
-                  sx={{ mt: 1 }}
+    <Box sx={commonStyles.contentContainer}>
+      <Typography variant="h4" sx={commonStyles.pageTitle}>
+        My Trips
+      </Typography>
+      
+      {bookings.length > 0 ? (
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
+          {bookings.map(bk => (
+            <Grid item xs={12} sm={6} md={4} key={bk._id}>
+              <Card sx={commonStyles.card}>
+                <CardMedia
+                  component="img"
+                  height={CARD_IMAGE_HEIGHT.small}
+                  image={`${BASE_URL}${bk.property.images?.[0]?.path || bk.property.images?.[0]}`}
+                  alt={bk.property.title}
+                  sx={{ objectFit: "cover" }}
                 />
-                {bk.bookedBeds && bk.bookedBeds.length > 0 && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Beds: {bk.bookedBeds.map(b => b.bedLabel).join(", ")}
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                    {bk.property.title}
                   </Typography>
-                )}
-                <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  <Button 
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {bk.property.address}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600 }}>
+                    Total: ${bk.totalPrice}
+                  </Typography>
+                  <Chip 
+                    label={bk.status.toUpperCase()} 
+                    color={getStatusColor(bk.status)} 
                     size="small" 
-                    variant="outlined" 
-                    onClick={() => handleOpenDialog(bk._id)}
-                  >
-                    View Details & Message
-                  </Button>
-                  {(bk.status === "pending" || bk.status === "confirmed") && (
+                    sx={{ mt: 1 }}
+                  />
+                  {bk.bookedBeds && bk.bookedBeds.length > 0 && (
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                      Beds: {bk.bookedBeds.map(b => b.bedLabel).join(", ")}
+                    </Typography>
+                  )}
+                  <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
                     <Button 
                       size="small" 
                       variant="outlined" 
-                      color="error"
-                      onClick={() => handleCancelBooking(bk._id)}
+                      fullWidth
+                      onClick={() => handleOpenDialog(bk._id)}
                     >
-                      Cancel
+                      View Details & Message
                     </Button>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-      {!bookings.length && <Typography sx={{ mt: 7, color: "gray" }}>No trips/bookings found.</Typography>}
+                    {(bk.status === "pending" || bk.status === "confirmed") && (
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        color="error"
+                        fullWidth
+                        onClick={() => handleCancelBooking(bk._id)}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <NoTrips />
+      )}
 
       {/* Booking Details & Messaging Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -139,8 +160,8 @@ export default function TripListPage() {
               />
             </DialogTitle>
             <DialogContent dividers>
-              <Typography variant="subtitle1" gutterBottom>
-                <strong>{selectedBooking.property.title}</strong>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                {selectedBooking.property.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 {selectedBooking.property.address}
@@ -156,7 +177,9 @@ export default function TripListPage() {
               </Typography>
 
               <Divider sx={{ my: 2 }} />
-              <Typography variant="subtitle2" gutterBottom>Messages</Typography>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                Messages
+              </Typography>
               
               {selectedBooking.messages && selectedBooking.messages.length > 0 ? (
                 <List sx={{ maxHeight: 200, overflow: "auto", bgcolor: "background.paper" }}>

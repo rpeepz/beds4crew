@@ -112,32 +112,11 @@ export default function NavigationDrawer({ children }) {
         <Divider sx={{ my: 1 }} />
         
         {/* Theme Toggle Button */}
-        <ListItemButton 
-          onClick={toggleTheme}
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            py: 1.5,
-          }}
-        >
-          <Button
-            variant="contained"
-            startIcon={mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleTheme();
-            }}
-            sx={{
-              width: '100%',
-              backgroundColor: mode === 'light' ? '#1e1e1e' : '#ffffff',
-              color: mode === 'light' ? '#ffffff' : '#000000',
-              '&:hover': {
-                backgroundColor: mode === 'light' ? '#2d2d2d' : '#e0e0e0',
-              },
-            }}
-          >
-            {mode === 'light' ? 'Dark Mode' : 'Light Mode'}
-          </Button>
+        <ListItemButton onClick={toggleTheme}>
+          <ListItemIcon>
+            {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+          </ListItemIcon>
+          <ListItemText primary={mode === 'light' ? 'Dark Mode' : 'Light Mode'} />
         </ListItemButton>
         
         <ListItemButton onClick={handleLogout}>
@@ -156,7 +135,7 @@ export default function NavigationDrawer({ children }) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Beds4Crew&copy;
+            Beds4Crew&nbsp;&copy;
           </Typography>
           {isEmpty(user) && (
             <IconButton color="inherit" edge="end" onClick={() => navigate("/login")}>

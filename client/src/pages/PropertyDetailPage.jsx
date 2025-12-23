@@ -5,9 +5,11 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import { useSnackbar } from "../components/AppSnackbar";
 import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { LoadingState } from "../components/EmptyState";
 import RoomBedsConfigurator from "../components/RoomBedsConfigurator";
 import PhotoTile from "../components/PhotoTile";
 import PropertyCalendar from "../components/PropertyCalendar";
+import { commonStyles } from "../utils/styleConstants";
 import EditIcon from "@mui/icons-material/Edit";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -200,7 +202,7 @@ export default function PropertyDetailPage() {
     }
   };
 
-  if (!property) return <Box sx={{ textAlign: "center", p: 4 }}><CircularProgress /></Box>;
+  if (!property) return <LoadingState message="Loading property details..." />;
 
   const nights = startDate && endDate ? dayjs(endDate).startOf("day").diff(dayjs(startDate).startOf("day"), "day") : 0;
   const total = nights * (property.pricePerNight || 0);
@@ -209,10 +211,10 @@ export default function PropertyDetailPage() {
   const hostHasPaid = property.ownerHost?.hasPaid === true;
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto", p: 2 }}>
+    <Box sx={commonStyles.detailContainer}>
       {/* Payment Warning for Guests */}
       {!isOwner && !hostHasPaid && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={commonStyles.sectionSpacing}>
           <Typography variant="body2" fontWeight="bold">This property is not available for booking</Typography>
           <Typography variant="body2">The host has not completed payment verification.</Typography>
         </Alert>
@@ -220,8 +222,8 @@ export default function PropertyDetailPage() {
 
       {/* Owner Alerts */}
       {isOwner && !property.isActive && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Alert severity="info" sx={commonStyles.sectionSpacing}>
+          <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={1}>
             <Typography variant="body2">Your property is inactive. Edit details and configure rooms & beds to activate.</Typography>
             <Button size="small" startIcon={<EditIcon />} onClick={() => setEditDialogOpen(true)}>Edit</Button>
           </Box>
@@ -229,17 +231,23 @@ export default function PropertyDetailPage() {
       )}
 
       {isOwner && (
-        <Card sx={{ mb: 2, p: 2, bgcolor: property.isActive ? "#e8f5e9" : "#ffebee" }}>
+        <Card sx={{ ...commonStyles.sectionSpacing, p: 2, bgcolor: property.isActive ? "#e8f5e9" : "#ffebee" }}>
           <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={2}>
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 {property.isActive ? "✓ Property Active" : "⚠ Property Inactive"}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2" color="text.secondary">
                 {property.isActive ? "Your property is visible to guests and can receive bookings." : "Configure rooms and beds to activate your property."}
               </Typography>
             </Box>
-            <Button variant="contained" color={property.isActive ? "error" : "success"} onClick={handleToggleActive} disabled={loading || property.rooms.length === 0}>
+            <Button 
+              variant="contained" 
+              color={property.isActive ? "error" : "success"} 
+              onClick={handleToggleActive} 
+              disabled={loading || property.rooms.length === 0}
+              sx={{ minWidth: { xs: "100%", sm: "auto" } }}
+            >
               {loading ? <CircularProgress size={24} /> : (property.isActive ? "Deactivate" : "Activate")}
             </Button>
           </Box>
@@ -247,15 +255,24 @@ export default function PropertyDetailPage() {
       )}
 
       {/* Property Title & Photos */}
-      <Typography variant="h4" mb={2}>{property.title}</Typography>
+      <Typography variant="h4" sx={commonStyles.pageTitle}>{property.title}</Typography>
       
       {property.images?.length > 0 && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" mb={2}>Photo Gallery</Typography>
+        <Box sx={commonStyles.sectionSpacing}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>Photo Gallery</Typography>
           <Grid container spacing={2}>
             {property.images.map((img, idx) => (
               <Grid item xs={12} sm={6} md={4} key={idx}>
-                <PhotoTile imageUrl={`${BASE_URL}${img.path || img}`} caption={img.caption || ""} onCaptionChange={handleCaptionChange} onImageDelete={handleImageDelete} isOwner={isOwner} index={idx} captionLoading={captionLoading[idx]} deleteLoading={deleteLoading[idx]} />
+                <PhotoTile 
+                  imageUrl={`${BASE_URL}${img.path || img}`} 
+                  caption={img.caption || ""} 
+                  onCaptionChange={handleCaptionChange} 
+                  onImageDelete={handleImageDelete} 
+                  isOwner={isOwner} 
+                  index={idx} 
+                  captionLoading={captionLoading[idx]} 
+                  deleteLoading={deleteLoading[idx]} 
+                />
               </Grid>
             ))}
           </Grid>
@@ -264,38 +281,56 @@ export default function PropertyDetailPage() {
 
       {/* Photo Upload - Host Only */}
       {isOwner && (
-        <Card sx={{ p: 2, mb: 3, bgcolor: "#f5f5f5", border: "2px dashed #1976d2" }}>
-          <Typography variant="h6" mb={2}>Upload Photos</Typography>
-          <Typography variant="body2" color="textSecondary" mb={2}>Add photos to your listing. You can add captions to describe each photo.</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Input type="file" multiple inputProps={{ accept: "image/*" }} onChange={handlePhotoUpload} disabled={uploadLoading} sx={{ flex: 1 }} />
-            <Button variant="contained" startIcon={<CloudUploadIcon />} disabled={uploadLoading} component="label">
+        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 }, bgcolor: "#f5f5f5", border: "2px dashed #1976d2" }}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>Upload Photos</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Add photos to your listing. You can add captions to describe each photo.
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, alignItems: "center", gap: 2 }}>
+            <Input 
+              type="file" 
+              multiple 
+              inputProps={{ accept: "image/*" }} 
+              onChange={handlePhotoUpload} 
+              disabled={uploadLoading} 
+              sx={{ flex: 1, width: { xs: "100%", sm: "auto" } }} 
+            />
+            <Button 
+              variant="contained" 
+              startIcon={<CloudUploadIcon />} 
+              disabled={uploadLoading} 
+              component="label"
+              fullWidth={true}
+              sx={{ display: { xs: "flex", sm: "none" } }}
+            >
               {uploadLoading ? "Uploading..." : "Upload"}
               <input hidden type="file" multiple accept="image/*" onChange={handlePhotoUpload} disabled={uploadLoading} />
             </Button>
           </Box>
-          <Typography variant="caption" color="textSecondary" sx={{ display: "block", mt: 1 }}>JPG, PNG, GIF, WebP. Max 10MB each.</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+            JPG, PNG, GIF, WebP. Max 10MB each.
+          </Typography>
         </Card>
       )}
 
-      <Typography variant="body1" mb={2}>{property.description}</Typography>
+      <Typography variant="body1" sx={commonStyles.sectionSpacing}>{property.description}</Typography>
 
       {/* Property Details */}
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" mb={1}>Property Details</Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-          <Box><Typography variant="caption" color="textSecondary">Type</Typography><Typography variant="body2">{property.type}</Typography></Box>
-          <Box><Typography variant="caption" color="textSecondary">Category</Typography><Typography variant="body2">{property.category || "..."}</Typography></Box>
-          <Box><Typography variant="caption" color="textSecondary">Location</Typography><Typography variant="body2">{property.city}, {property.country}</Typography></Box>
-          <Box><Typography variant="caption" color="textSecondary">Price/Night</Typography><Typography variant="body2">${property.pricePerNight || "..."}</Typography></Box>
-          <Box><Typography variant="caption" color="textSecondary">Max Guests</Typography><Typography variant="body2">{property.maxGuests || "..."}</Typography></Box>
+      <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
+        <Typography variant="h6" sx={commonStyles.sectionTitle}>Property Details</Typography>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+          <Box><Typography variant="caption" color="text.secondary">Type</Typography><Typography variant="body2">{property.type}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Category</Typography><Typography variant="body2">{property.category || "..."}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Location</Typography><Typography variant="body2">{property.city}, {property.country}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Price/Night</Typography><Typography variant="body2">${property.pricePerNight || "..."}</Typography></Box>
+          <Box><Typography variant="caption" color="text.secondary">Max Guests</Typography><Typography variant="body2">{property.maxGuests || "..."}</Typography></Box>
         </Box>
       </Card>
 
       {/* Facilities */}
       {property.facilities?.length > 0 && (
-        <Card sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6" mb={1}>Facilities</Typography>
+        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>Facilities</Typography>
           <Box display="flex" flexWrap="wrap" gap={1}>
             {property.facilities.map((facility, idx) => <Chip key={idx} label={facility} variant="outlined" />)}
           </Box>
@@ -304,14 +339,18 @@ export default function PropertyDetailPage() {
 
       {/* Rooms & Beds */}
       {property.rooms?.length > 0 && (
-        <Card sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6" mb={2}>Rooms & Beds</Typography>
+        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>Rooms & Beds</Typography>
           {property.rooms.map((room, roomIdx) => (
             <Card key={roomIdx} sx={{ mb: 2, p: 2, bgcolor: "#f5f5f5" }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>{room.isPrivate ? "🔒 Private" : "🔓 Shared"} Room #{roomIdx + 1}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                {room.isPrivate ? "🔒 Private" : "🔓 Shared"} Room #{roomIdx + 1}
+              </Typography>
               <Box sx={{ pl: 2 }}>
                 {room.beds.map((bed, bedIdx) => (
-                  <Typography key={bedIdx} variant="body2">• {bed.label} - ${bed.pricePerBed}/night {bed.isAvailable ? "✓" : "✗"}</Typography>
+                  <Typography key={bedIdx} variant="body2">
+                    • {bed.label} - ${bed.pricePerBed}/night {bed.isAvailable ? "✓" : "✗"}
+                  </Typography>
                 ))}
               </Box>
             </Card>
@@ -320,14 +359,16 @@ export default function PropertyDetailPage() {
       )}
 
       {/* Availability Calendar Toggle & Display */}
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={showCalendar ? 2 : 0}>
+      <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
+        <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={1} mb={showCalendar ? 2 : 0}>
           <Typography variant="h6">Availability</Typography>
           <Button
             variant={showCalendar ? "contained" : "outlined"}
             startIcon={<CalendarMonthIcon />}
             onClick={() => setShowCalendar(!showCalendar)}
             size="small"
+            fullWidth={false}
+            sx={{ minWidth: { xs: "100%", sm: "auto" } }}
           >
             {showCalendar ? "Hide Calendar" : "Show Calendar"}
           </Button>
@@ -337,12 +378,14 @@ export default function PropertyDetailPage() {
 
       {/* Booking Section */}
       {property.isActive && !isOwner && currentUser && hostHasPaid && (
-        <Card sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6" mb={2}>Book This Property</Typography>
-          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap" mb={2}>
+        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>Book This Property</Typography>
+          <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2} alignItems={{ xs: "stretch", sm: "center" }} flexWrap="wrap" mb={2}>
             <DatePicker label="Start" value={startDate} onChange={val => setStartDate(val ? dayjs(val) : null)} />
             <DatePicker label="End" value={endDate} onChange={val => setEndDate(val ? dayjs(val) : null)} />
-            <Button variant="contained" onClick={handleBook}>Book</Button>
+            <Button variant="contained" onClick={handleBook} fullWidth={false} sx={{ minWidth: { xs: "100%", sm: "auto" } }}>
+              Book
+            </Button>
           </Box>
           {nights > 0 && <Typography variant="subtitle1">Total ({nights} nights): ${total}</Typography>}
           {status && <Typography color={status.startsWith("Error") ? "error" : "success"}>{status}</Typography>}
@@ -350,7 +393,9 @@ export default function PropertyDetailPage() {
       )}
 
       {!property.isActive && !isOwner && (
-        <Alert severity="warning"><Typography variant="body2">This property is inactive and cannot be booked.</Typography></Alert>
+        <Alert severity="warning">
+          <Typography variant="body2">This property is inactive and cannot be booked.</Typography>
+        </Alert>
       )}
 
       {/* Edit Dialog */}

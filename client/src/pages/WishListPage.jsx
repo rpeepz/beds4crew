@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Grid, Card, CardMedia, CardContent, CardActions, Button, IconButton } from "@mui/material";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Box, Typography, Grid } from "@mui/material";
+import { useLocation } from "react-router-dom";
+import PropertyCard from "../components/PropertyCard";
+import { LoadingState, NoWishlist } from "../components/EmptyState";
 import { useSnackbar } from "../components/AppSnackbar";
-import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { fetchWithAuth, API_URL } from "../utils/api";
+import { commonStyles } from "../utils/styleConstants";
 
 export default function WishListPage() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const location = useLocation();
   const snackbar = useSnackbar();
 
@@ -22,7 +23,6 @@ export default function WishListPage() {
           setProperties([]);
           return;
         }
-        // Fetch each property in parallel
         const props = await Promise.all(
           user.wishList.map(pid =>
             fetch(`${API_URL}/properties/${pid}`).then(r => r.json())
@@ -34,7 +34,7 @@ export default function WishListPage() {
       }
     }
     fetchWishlist();
-  }, [location.pathname]); // Refetch when navigating to this page
+  }, [location.pathname]);
 
   const handleRemove = async (propId) => {
     const res = await fetchWithAuth(`${API_URL}/properties/${propId}/wishlist`, {
@@ -46,41 +46,32 @@ export default function WishListPage() {
     }
   };
 
+  if (loading) {
+    return <LoadingState message="Loading wishlist..." />;
+  }
+
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", mt: 4 }}>
-      <Typography variant="h4" mb={2}>My Wishlist</Typography>
-      {loading && <Typography>Loading...</Typography>}
-      <Grid container spacing={2}>
-        {properties.map(prop => (
-          <Grid item xs={12} sm={6} md={4} key={prop._id}>
-            <Card>
-              <CardMedia
-                component="img"
-                height="140"
-                image={`${BASE_URL}${prop.images?.[0]}`}
-                alt={prop.title}
-                onClick={() => navigate(`/property/${prop._id}`)}
-                sx={{ cursor: "pointer" }}
+    <Box sx={commonStyles.contentContainer}>
+      <Typography variant="h4" sx={commonStyles.pageTitle}>
+        My Wishlist
+      </Typography>
+      
+      {properties.length > 0 ? (
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
+          {properties.map(prop => (
+            <Grid item xs={12} sm={6} md={4} key={prop._id}>
+              <PropertyCard
+                property={prop}
+                onWishlistToggle={handleRemove}
+                isWishlisted={true}
+                showWishlist={true}
               />
-              <CardContent>
-                <Typography variant="h6">{prop.title}</Typography>
-                <Typography variant="body2">{prop.address}</Typography>
-              </CardContent>
-              <CardActions sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Button size="small" onClick={() => navigate(`/property/${prop._id}`)}>View Details</Button>
-                <IconButton
-                  sx={{ color: "error.main" }}
-                  onClick={() => handleRemove(prop._id)}
-                  aria-label="Remove from wishlist"
-                >
-                  <FavoriteIcon />
-                </IconButton>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-      {!loading && !properties.length && <Typography sx={{ mt: 7, color: "gray" }}>No wishlisted properties.</Typography>}
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <NoWishlist />
+      )}
     </Box>
   );
 }

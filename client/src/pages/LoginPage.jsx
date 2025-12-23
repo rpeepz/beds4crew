@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { TextField, Button, Typography, Box } from "@mui/material";
+import { TextField, Button, Typography, Box, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
 import { setTokens, API_URL } from "../utils/api";
+import { commonStyles } from "../utils/styleConstants";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const snackbar = useSnackbar();
 
@@ -15,6 +17,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
@@ -34,46 +38,74 @@ export default function LoginPage() {
     } catch (err) {
       snackbar("Login failed", "error");
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ maxWidth: 400, margin: "40px auto", p: 3 }}>
-      <Typography variant="h4" mb={2}>
-        Login
-      </Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField
-          name="email"
-          label="Email"
-          fullWidth
-          required
-          margin="normal"
-          value={form.email}
-          onChange={handleChange}
-        />
-        <TextField
-          name="password"
-          label="Password"
-          type="password"
-          fullWidth
-          required
-          margin="normal"
-          value={form.password}
-          onChange={handleChange}
-        />
-        <Button type="submit" variant="contained" color="primary" fullWidth>
-          Login
-        </Button>
-        {error && (
-          <Typography color="error" mt={2}>
-            {error}
-          </Typography>
-        )}
-        <Typography mt={2} align="center">
-          Don't have an account? <a href="/register">Register</a>
+    <Box sx={commonStyles.authContainer}>
+      <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 } }}>
+        <Typography variant="h4" sx={commonStyles.pageTitle} align="center">
+          Welcome Back
         </Typography>
-      </form>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
+          Sign in to continue to Beds4Crew
+        </Typography>
+        
+        <form onSubmit={handleSubmit}>
+          <TextField
+            name="email"
+            label="Email"
+            type="email"
+            fullWidth
+            required
+            margin="normal"
+            value={form.email}
+            onChange={handleChange}
+            disabled={loading}
+          />
+          <TextField
+            name="password"
+            label="Password"
+            type="password"
+            fullWidth
+            required
+            margin="normal"
+            value={form.password}
+            onChange={handleChange}
+            disabled={loading}
+          />
+          
+          {error && (
+            <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+              {error}
+            </Typography>
+          )}
+          
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            fullWidth
+            disabled={loading}
+            sx={commonStyles.fullWidthButton}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+          
+          <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+            Don't have an account?{" "}
+            <Button 
+              variant="text" 
+              onClick={() => navigate("/register")}
+              sx={{ textTransform: "none" }}
+            >
+              Sign Up
+            </Button>
+          </Typography>
+        </form>
+      </Paper>
     </Box>
   );
 }

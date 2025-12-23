@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Typography, Box, Button, Paper, Divider } from "@mui/material";
+import { Typography, Box, Button, Paper, Divider } from "@mui/material";
 import PhoneIcon from "@mui/icons-material/Phone";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
@@ -7,6 +7,7 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
 import { fetchWithAuth, API_URL } from "../utils/api";
+import { commonStyles } from "../utils/styleConstants";
 
 export default function SupportPage() {
   const navigate = useNavigate();
@@ -51,7 +52,6 @@ export default function SupportPage() {
       setUser(data.user);
       snackbar(data.message, "success");
       
-      // Reload page to update navigation
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -108,23 +108,24 @@ export default function SupportPage() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom align="center">
+    <Box sx={commonStyles.authContainer}>
+      <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 } }}>
+        <Typography variant="h4" sx={commonStyles.pageTitle} align="center">
           Support Center
         </Typography>
-        <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 4 }}>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 4 }}>
           How can we help you today?
         </Typography>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 4 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Button
             variant="contained"
             color="primary"
             size="large"
             startIcon={<PhoneIcon />}
             onClick={handleCallSupport}
-            sx={{ py: 2 }}
+            fullWidth
+            sx={{ py: 1.5 }}
           >
             Click to Call Support
           </Button>
@@ -135,7 +136,8 @@ export default function SupportPage() {
             size="large"
             startIcon={<PersonAddIcon />}
             onClick={handleSignUpForHosting}
-            sx={{ py: 2 }}
+            fullWidth
+            sx={{ py: 1.5 }}
           >
             Sign Up for Hosting
           </Button>
@@ -145,7 +147,7 @@ export default function SupportPage() {
         {user && 0 ? (
           <>
             <Divider sx={{ my: 4 }} />
-            <Typography variant="h6" gutterBottom align="center" color="text.secondary">
+            <Typography variant="h6" align="center" color="text.secondary" sx={commonStyles.sectionTitle}>
               Admin Controls
             </Typography>
             <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
@@ -160,6 +162,7 @@ export default function SupportPage() {
                 startIcon={<SwapHorizIcon />}
                 onClick={handleToggleRole}
                 disabled={loading}
+                fullWidth
                 sx={{ py: 1.5 }}
               >
                 Toggle Role (Guest ↔ Host)
@@ -172,6 +175,7 @@ export default function SupportPage() {
                 startIcon={<PaymentIcon />}
                 onClick={handleTogglePayment}
                 disabled={loading}
+                fullWidth
                 sx={{ py: 1.5 }}
               >
                 Toggle Payment Status
@@ -183,14 +187,15 @@ export default function SupportPage() {
                 size="large"
                 onClick={handleClearCache}
                 disabled={loading}
+                fullWidth
                 sx={{ py: 1.5 }}
               >
                 Clear Server Cache
               </Button>
             </Box>
           </>
-        ) : <></>}
+        ) : null}
       </Paper>
-    </Container>
+    </Box>
   );
 }

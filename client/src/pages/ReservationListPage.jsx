@@ -4,7 +4,9 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, List,
   ListItem, ListItemText, Divider, Alert
 } from "@mui/material";
+import { LoadingState, NoReservations } from "../components/EmptyState";
 import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
 
 export default function ReservationListPage() {
   const [bookings, setBookings] = useState([]);
@@ -89,43 +91,54 @@ export default function ReservationListPage() {
     }
   };
 
+  if (loading) {
+    return <LoadingState message="Loading reservations..." />;
+  }
+
   const pendingBookings = bookings.filter(b => b.status === "pending" && b.property);
   const confirmedBookings = bookings.filter(b => b.status === "confirmed" && b.property);
   const otherBookings = bookings.filter(b => b.status !== "pending" && b.status !== "confirmed" && b.property);
 
   return (
-    <Box sx={{ maxWidth: 1100, mx: "auto", mt: 4, px: 2 }}>
-      <Typography variant="h4" mb={2}>Reservations for My Properties</Typography>
+    <Box sx={commonStyles.contentContainer}>
+      <Typography variant="h4" sx={commonStyles.pageTitle}>
+        Reservations for My Properties
+      </Typography>
 
-      {!loading && bookings.length === 0 && (
-        <Typography sx={{ mt: 7, color: "gray" }}>No reservations found.</Typography>
-      )}
+      {bookings.length === 0 && <NoReservations />}
 
       {pendingBookings.length > 0 && (
         <>
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert severity="info" sx={commonStyles.sectionSpacing}>
             You have {pendingBookings.length} pending reservation request{pendingBookings.length > 1 ? 's' : ''} awaiting your response
           </Alert>
-          <Typography variant="h6" mb={2} color="warning.main">Pending Requests</Typography>
-          <Grid container spacing={2} mb={4}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle} color="warning.main">
+            Pending Requests
+          </Typography>
+          <Grid container spacing={{ xs: 2, sm: 3 }} sx={commonStyles.sectionSpacing}>
             {pendingBookings.map(bk => (
               <Grid item xs={12} sm={6} md={4} key={bk._id}>
-                <Card sx={{ border: 2, borderColor: "warning.main" }}>
+                <Card sx={{ ...commonStyles.card, border: 2, borderColor: "warning.main" }}>
                   <CardMedia
                     component="img"
-                    height="140"
+                    height={CARD_IMAGE_HEIGHT.small}
                     image={`${BASE_URL}${bk.property?.images?.[0]?.path || bk.property?.images?.[0] || ''}`}
                     alt={bk.property?.title || 'Property'}
+                    sx={{ objectFit: "cover" }}
                   />
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>{bk.property?.title || 'Property'}</Typography>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                      {bk.property?.title || 'Property'}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Guest: {bk.guest?.firstName} {bk.guest?.lastName}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
                     </Typography>
-                    <Typography variant="body2">Total: ${bk.totalPrice}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Total: ${bk.totalPrice}
+                    </Typography>
                     <Chip 
                       label={bk.status.toUpperCase()} 
                       color={getStatusColor(bk.status)} 
@@ -133,7 +146,7 @@ export default function ReservationListPage() {
                       sx={{ mt: 1 }}
                     />
                     {bk.bookedBeds && bk.bookedBeds.length > 0 && (
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
                         Beds: {bk.bookedBeds.map(b => b.bedLabel).join(", ")}
                       </Typography>
                     )}
@@ -142,6 +155,7 @@ export default function ReservationListPage() {
                         size="small" 
                         variant="contained" 
                         color="success"
+                        fullWidth
                         onClick={() => handleConfirmBooking(bk._id)}
                       >
                         Confirm Booking
@@ -150,6 +164,7 @@ export default function ReservationListPage() {
                         size="small" 
                         variant="outlined" 
                         color="error"
+                        fullWidth
                         onClick={() => handleRejectBooking(bk._id)}
                       >
                         Reject
@@ -157,6 +172,7 @@ export default function ReservationListPage() {
                       <Button 
                         size="small" 
                         variant="outlined"
+                        fullWidth
                         onClick={() => handleOpenDialog(bk._id)}
                       >
                         Message Guest
@@ -172,26 +188,33 @@ export default function ReservationListPage() {
 
       {confirmedBookings.length > 0 && (
         <>
-          <Typography variant="h6" mb={2} color="success.main">Confirmed Reservations</Typography>
-          <Grid container spacing={2} mb={4}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle} color="success.main">
+            Confirmed Reservations
+          </Typography>
+          <Grid container spacing={{ xs: 2, sm: 3 }} sx={commonStyles.sectionSpacing}>
             {confirmedBookings.map(bk => (
               <Grid item xs={12} sm={6} md={4} key={bk._id}>
-                <Card>
+                <Card sx={commonStyles.card}>
                   <CardMedia
                     component="img"
-                    height="140"
+                    height={CARD_IMAGE_HEIGHT.small}
                     image={`${BASE_URL}${bk.property?.images?.[0]?.path || bk.property?.images?.[0] || ''}`}
                     alt={bk.property?.title || 'Property'}
+                    sx={{ objectFit: "cover" }}
                   />
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>{bk.property?.title || 'Property'}</Typography>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                      {bk.property?.title || 'Property'}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Guest: {bk.guest?.firstName} {bk.guest?.lastName}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
                     </Typography>
-                    <Typography variant="body2">Total: ${bk.totalPrice}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Total: ${bk.totalPrice}
+                    </Typography>
                     <Chip 
                       label={bk.status.toUpperCase()} 
                       color={getStatusColor(bk.status)} 
@@ -199,7 +222,7 @@ export default function ReservationListPage() {
                       sx={{ mt: 1 }}
                     />
                     {bk.bookedBeds && bk.bookedBeds.length > 0 && (
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
                         Beds: {bk.bookedBeds.map(b => b.bedLabel).join(", ")}
                       </Typography>
                     )}
@@ -222,26 +245,33 @@ export default function ReservationListPage() {
 
       {otherBookings.length > 0 && (
         <>
-          <Typography variant="h6" mb={2}>Past/Cancelled Reservations</Typography>
-          <Grid container spacing={2}>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>
+            Past/Cancelled Reservations
+          </Typography>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             {otherBookings.map(bk => (
               <Grid item xs={12} sm={6} md={4} key={bk._id}>
-                <Card sx={{ opacity: 0.7 }}>
+                <Card sx={{ ...commonStyles.card, opacity: 0.7 }}>
                   <CardMedia
                     component="img"
-                    height="140"
+                    height={CARD_IMAGE_HEIGHT.small}
                     image={`${BASE_URL}${bk.property?.images?.[0]?.path || bk.property?.images?.[0] || ''}`}
                     alt={bk.property?.title || 'Property'}
+                    sx={{ objectFit: "cover" }}
                   />
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>{bk.property?.title || 'Property'}</Typography>
+                    <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                      {bk.property?.title || 'Property'}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Guest: {bk.guest?.firstName} {bk.guest?.lastName}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
                     </Typography>
-                    <Typography variant="body2">Total: ${bk.totalPrice}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Total: ${bk.totalPrice}
+                    </Typography>
                     <Chip 
                       label={bk.status.toUpperCase()} 
                       color={getStatusColor(bk.status)} 
