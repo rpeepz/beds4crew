@@ -108,16 +108,33 @@ export default function BrowsePage() {
 
   // Filter properties within radius (only those with coordinates)
   const filteredProperties = useMemo(() => {
-    return allProperties.filter(p => {
+    const filtered = allProperties.filter(p => {
       // Only include properties with valid coordinates for map/distance filtering
       if (!p.latitude || !p.longitude) return false;
       return calculateDistance(center.lat, center.lng, p.latitude, p.longitude) <= radius;
     });
+    
+    console.log('Filtered properties for map:', {
+      total: allProperties.length,
+      filtered: filtered.length,
+      center,
+      radius,
+      sample: filtered.slice(0, 2).map(p => ({
+        title: p.title,
+        lat: p.latitude,
+        lng: p.longitude
+      }))
+    });
+    
+    return filtered;
   }, [allProperties, center, radius]);
 
   // Group properties by proximity (CLUSTER_RADIUS_METERS)
   const groupedMarkers = useMemo(() => {
-    if (!filteredProperties.length) return [];
+    if (!filteredProperties.length) {
+      console.log('No filtered properties to group');
+      return [];
+    }
 
     const groups = [];
     const visited = new Set();
@@ -147,6 +164,12 @@ export default function BrowsePage() {
 
       groups.push(cluster);
     }
+
+    console.log('Grouped markers:', {
+      groupCount: groups.length,
+      totalProperties: filteredProperties.length,
+      groupSizes: groups.map(g => g.length)
+    });
 
     return groups;
   }, [filteredProperties]);
