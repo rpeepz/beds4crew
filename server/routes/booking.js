@@ -259,6 +259,11 @@ router.post("/:id/message", verifyToken, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
     
+    // Prevent messaging on rejected or cancelled bookings
+    if (booking.status === "rejected" || booking.status === "cancelled") {
+      return res.status(400).json({ message: "Cannot send messages on rejected or cancelled bookings" });
+    }
+    
     if (!text || text.trim() === "") {
       return res.status(400).json({ message: "Message text is required" });
     }

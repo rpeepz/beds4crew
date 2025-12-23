@@ -406,19 +406,25 @@ export default function ReservationListPage() {
                 <Typography variant="body2" color="text.secondary">No messages yet</Typography>
               )}
 
-              <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Type a message to the guest..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                />
-                <Button variant="contained" onClick={handleSendMessage}>
-                  Send
-                </Button>
-              </Box>
+              {selectedBooking.status !== "rejected" && selectedBooking.status !== "cancelled" ? (
+                <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Type a message to the guest..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  />
+                  <Button variant="contained" onClick={handleSendMessage}>
+                    Send
+                  </Button>
+                </Box>
+              ) : (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Messaging is disabled for {selectedBooking.status} bookings.
+                </Alert>
+              )}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setDialogOpen(false)}>Close</Button>

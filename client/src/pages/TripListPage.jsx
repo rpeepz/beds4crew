@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { 
   Box, Typography, Card, CardContent, CardMedia, Grid, Chip, Button, 
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, List, 
-  ListItem, ListItemText, Divider, Avatar, ListItemAvatar, Badge
+  ListItem, ListItemText, Divider, Avatar, ListItemAvatar, Badge, Alert
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import { LoadingState, NoTrips } from "../components/EmptyState";
@@ -238,19 +238,25 @@ export default function TripListPage() {
                 <Typography variant="body2" color="text.secondary">No messages yet</Typography>
               )}
 
-              <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Type a message to the host..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                />
-                <Button variant="contained" onClick={handleSendMessage}>
-                  Send
-                </Button>
-              </Box>
+              {selectedBooking.status !== "rejected" && selectedBooking.status !== "cancelled" ? (
+                <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Type a message to the host..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  />
+                  <Button variant="contained" onClick={handleSendMessage}>
+                    Send
+                  </Button>
+                </Box>
+              ) : (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Messaging is disabled for {selectedBooking.status} bookings.
+                </Alert>
+              )}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setDialogOpen(false)}>Close</Button>
