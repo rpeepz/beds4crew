@@ -266,13 +266,21 @@ router.post("/:id/message", verifyToken, async (req, res) => {
     booking.messages.push({
       sender: req.user.id,
       text: text.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
+      read: false
     });
+    
+    // Mark as unread for the recipient
+    if (booking.guest.toString() === req.user.id) {
+      booking.unreadByHost = true;
+    } else {
+      booking.unreadByGuest = true;
+    }
     
     await booking.save();
     
     // Populate the sender info for the response
-    await booking.populate("messages.sender", "firstName lastName email");
+    await booking.populate("messages.sender", "firstName lastName email profileImagePath");
     
     res.json({ message: "Message sent", booking });
   } catch (error) {
@@ -285,7 +293,7 @@ router.get("/:id", verifyToken, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate("property guest host")
-      .populate("messages.sender", "firstName lastName email");
+      .populate("messages.sender", "firstName lastName email profileImagePath");
     
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
@@ -296,9 +304,43 @@ router.get("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
     
+    // Mark messages as read for the current user
+    if (booking.guest._id.toString() === req.user.id) {
+      booking.unreadByGuest = false;
+    } else {
+      booking.unreadByHost = false;
+    }
+    
+    await booking.save();
+    
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch booking", error: error.message });
+  }
+});
+
+// Get count of unread messages for current user
+router.get("/unread/count", verifyToken, async (req, res) => {
+  try {
+    const user = JSON.parse(JSON.stringify(req.user)); // Get user info
+    let unreadCount = 0;
+    
+    // Check if user is guest or host and count accordingly
+    const asGuest = await Booking.countDocuments({ 
+      guest: req.user.id, 
+      unreadByGuest: true 
+    });
+    
+    const asHost = await Booking.countDocuments({ 
+      host: req.user.id, 
+      unreadByHost: true 
+    });
+    
+    unreadCount = asGuest + asHost;
+    
+    res.json({ unreadCount });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get unread count", error: error.message });
   }
 });
 

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { 
   Box, Typography, Card, CardContent, CardMedia, Grid, Chip, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, List,
-  ListItem, ListItemText, Divider, Alert
+  ListItem, ListItemText, Divider, Alert, Avatar, ListItemAvatar
 } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
 import { LoadingState, NoReservations } from "../components/EmptyState";
 import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
 import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
@@ -346,6 +347,11 @@ export default function ReservationListPage() {
                 <List sx={{ maxHeight: 200, overflow: "auto", bgcolor: "background.paper" }}>
                   {selectedBooking.messages.map((msg, idx) => (
                     <ListItem key={idx} alignItems="flex-start">
+                      <ListItemAvatar>
+                        <Avatar>
+                          <PersonIcon />
+                        </Avatar>
+                      </ListItemAvatar>
                       <ListItemText
                         primary={
                           <Typography variant="caption" color="text.secondary">

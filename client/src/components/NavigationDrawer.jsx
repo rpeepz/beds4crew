@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, IconButton, Divider, Toolbar, AppBar, Typography, Box, Button } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, IconButton, Divider, Toolbar, AppBar, Typography, Box, Button, Badge } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
@@ -15,7 +15,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
-import { logout } from "../utils/api";
+import { logout, fetchWithAuth, API_URL } from "../utils/api";
 import { useThemeMode } from "../contexts/ThemeContext";
 
 const drawerWidth = 220;
@@ -32,10 +32,31 @@ function isEmpty(obj) {
 
 export default function NavigationDrawer({ children }) {
   const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const snackbar = useSnackbar();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const { mode, toggleTheme } = useThemeMode();
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (!isEmpty(user)) {
+      fetchUnreadCount();
+      // Poll for new messages every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user.id]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/bookings/unread/count`);
+      const data = await res.json();
+      setUnreadCount(data.unreadCount || 0);
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -71,7 +92,11 @@ export default function NavigationDrawer({ children }) {
               <ListItemText primary="Wishlist" />
             </ListItemButton>
             <ListItemButton onClick={() => (clickedIconLink("/trips"))}>
-              <ListItemIcon><HotelIcon /></ListItemIcon>
+              <ListItemIcon>
+                <Badge badgeContent={unreadCount} color="error">
+                  <HotelIcon />
+                </Badge>
+              </ListItemIcon>
               <ListItemText primary="My Trips" />
             </ListItemButton>
           </>
@@ -89,7 +114,11 @@ export default function NavigationDrawer({ children }) {
               <ListItemText primary="Add Property" />
             </ListItemButton>
             <ListItemButton onClick={() => (clickedIconLink("/reservations"))}>
-              <ListItemIcon><SettingsIcon /></ListItemIcon>
+              <ListItemIcon>
+                <Badge badgeContent={unreadCount} color="error">
+                  <SettingsIcon />
+                </Badge>
+              </ListItemIcon>
               <ListItemText primary="Reservations" />
             </ListItemButton>
           </>

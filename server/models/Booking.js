@@ -19,8 +19,12 @@ const BookingSchema = new mongoose.Schema(
     messages: [{
       sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
       text: { type: String, required: true },
-      timestamp: { type: Date, default: Date.now }
-    }]
+      timestamp: { type: Date, default: Date.now },
+      read: { type: Boolean, default: false }
+    }],
+    // Track who has unread messages
+    unreadByGuest: { type: Boolean, default: false },
+    unreadByHost: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
