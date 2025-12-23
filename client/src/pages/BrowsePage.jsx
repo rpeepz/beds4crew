@@ -69,11 +69,14 @@ export default function BrowsePage() {
     fetch(`${API_URL}/properties`)
       .then(res => res.json())
       .then(data => {
-        // Only include active properties with location data from paid hosts
-        const activeProps = data.filter(
-          p => p.isActive && p.latitude && p.longitude && p.ownerHost?.hasPaid === true
-        );
+        // Filter to only active properties, but make lat/lng optional for list view
+        const activeProps = data.filter(p => p.isActive !== false);
         setAllProperties(activeProps);
+        
+        // Log how many properties have coordinates vs don't
+        const withCoords = activeProps.filter(p => p.latitude && p.longitude).length;
+        const withoutCoords = activeProps.length - withCoords;
+        console.log(`Loaded ${activeProps.length} properties: ${withCoords} with coordinates, ${withoutCoords} without`);
       })
       .catch(err => {
         console.error('Failed to fetch properties:', err);
@@ -103,11 +106,13 @@ export default function BrowsePage() {
     return calculateDistance(lat1, lng1, lat2, lng2) * 1609.34;
   };
 
-  // Filter properties within radius
+  // Filter properties within radius (only those with coordinates)
   const filteredProperties = useMemo(() => {
-    return allProperties.filter(p =>
-      calculateDistance(center.lat, center.lng, p.latitude, p.longitude) <= radius
-    );
+    return allProperties.filter(p => {
+      // Only include properties with valid coordinates for map/distance filtering
+      if (!p.latitude || !p.longitude) return false;
+      return calculateDistance(center.lat, center.lng, p.latitude, p.longitude) <= radius;
+    });
   }, [allProperties, center, radius]);
 
   // Group properties by proximity (CLUSTER_RADIUS_METERS)
@@ -145,13 +150,6 @@ export default function BrowsePage() {
 
     return groups;
   }, [filteredProperties]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProperties.length / RESULTS_PER_PAGE);
-  const paginatedProperties = useMemo(() => {
-    const start = (currentPage - 1) * RESULTS_PER_PAGE;
-    return filteredProperties.slice(start, start + RESULTS_PER_PAGE);
-  }, [filteredProperties, currentPage]);
 
   const handleLocationChange = (e) => {
     const selected = POPULAR_LOCATIONS.find(l => l.label === e.target.value);
@@ -325,27 +323,44 @@ export default function BrowsePage() {
       {/* Map Section */}
       {!loading && (
         <Card sx={{ mb: 3, height: '500px', overflow: 'hidden', display: 'flex', maxWidth: '600px' }}>
-          <MapView
-            properties={filteredProperties}
-            groupedMarkers={groupedMarkers}
-            center={center}
-            radius={radius}
-            onPropertyClick={(id) => navigate(`/property/${id}`)}
-          />
+          {filteredProperties.length > 0 ? (
+            <MapView
+              properties={filteredProperties}
+              groupedMarkers={groupedMarkers}
+              center={center}
+              radius={radius}
+              onPropertyClick={(id) => navigate(`/property/${id}`)}
+            />
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', p: 3 }}>
+              <Typography color="text.secondary" textAlign="center">
+                No properties with map coordinates found within {radius} miles.
+                <br />
+                <Typography variant="caption" component="span">
+                  (Properties without coordinates will still appear in the list below)
+                </Typography>
+              </Typography>
+            </Box>
+          )}
         </Card>
       )}
 
       {/* Results List Section */}
       <Box>
         <Typography variant="h6" mb={2}>
-          Properties ({filteredProperties.length})
+          All Properties ({allProperties.length})
+          {filteredProperties.length < allProperties.length && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              ({filteredProperties.length} on map)
+            </Typography>
+          )}
         </Typography>
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : paginatedProperties.length > 0 ? (
+        ) : allProperties.length > 0 ? (
           <>
             <Box
               sx={{
@@ -355,7 +370,7 @@ export default function BrowsePage() {
                 mb: 3,
               }}
             >
-              {paginatedProperties.map(prop => (
+              {allProperties.slice((currentPage - 1) * RESULTS_PER_PAGE, currentPage * RESULTS_PER_PAGE).map(prop => (
                 <Card key={prop._id} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <CardMedia
                     component="img"
@@ -363,7 +378,11 @@ export default function BrowsePage() {
                     image={`${BASE_URL}${prop.images?.[0]?.path || prop.images?.[0]}` || 'https://via.placeholder.com/300x180?text=No+Image'}
                     alt={prop.title}
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => setCenter({ lat: prop.latitude, lng: prop.longitude })}
+                    onClick={() => {
+                      if (prop.latitude && prop.longitude) {
+                        setCenter({ lat: prop.latitude, lng: prop.longitude });
+                      }
+                    }}
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" noWrap>
@@ -377,6 +396,11 @@ export default function BrowsePage() {
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
                       {prop.category} • {prop.type}
+                      {!prop.latitude && !prop.longitude && (
+                        <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                          ⚠ Not on map
+                        </Typography>
+                      )}
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ pt: 0 }}>
@@ -403,10 +427,10 @@ export default function BrowsePage() {
             </Box>
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {Math.ceil(allProperties.length / RESULTS_PER_PAGE) > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                 <Pagination
-                  count={totalPages}
+                  count={Math.ceil(allProperties.length / RESULTS_PER_PAGE)}
                   page={currentPage}
                   onChange={(_, val) => setCurrentPage(val)}
                 />
@@ -415,7 +439,7 @@ export default function BrowsePage() {
           </>
         ) : (
           <Typography color="textSecondary" sx={{ textAlign: 'center', py: 4 }}>
-            No properties found within {radius} miles of {selectedLocation || 'this location'}.
+            No properties found.
           </Typography>
         )}
       </Box>
