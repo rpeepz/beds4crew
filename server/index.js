@@ -78,7 +78,9 @@ if (!mongoURL) {
 
 // Basic test route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to Beds4Crew API" });
+  // res.json({ message: "Welcome to Beds4Crew API" });
+  res.redirect("https://beds4crew-o40r.onrender.com/");
+
 });
 
 // SPA fallback - serve index.html for all non-API routes
