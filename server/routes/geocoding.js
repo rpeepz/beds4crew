@@ -42,7 +42,7 @@ router.get('/search', async (req, res) => {
     }
 
     const { lat, lon } = data[0];
-    console.log('Geocoding result:', { lat, lon });
+    // console.log('Geocoding result:', { lat, lon });
     res.json({ lat, lon });
   } catch (err) {
     console.error(err);

@@ -13,8 +13,10 @@ const router = express.Router();
 router.post("/", verifyToken, uploadMultiple, async (req, res) => {
   try {
     const { title, type, description, pricePerNight, address, maxGuests, facilities, category, city, country, rooms } = req.body;
+    
+    // Cloudinary returns the full URL in file.path
     const images = req.files?.map(file => ({
-      path: `/uploads/${file.filename}`,
+      path: file.path, // Cloudinary URL
       caption: ""
     })) || [];
     
@@ -304,8 +306,9 @@ router.post("/:id/images", verifyToken, uploadMultiple, async (req, res) => {
       return res.status(400).json({ message: "Maximum 6 images allowed per property" });
     }
 
+    // Cloudinary returns the full URL in file.path
     const newImages = req.files?.map(file => ({
-      path: `/uploads/${file.filename}`,
+      path: file.path, // Cloudinary URL
       caption: ""
     })) || [];
 
