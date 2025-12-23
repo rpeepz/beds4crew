@@ -3,7 +3,7 @@ import { Box, TextField, Button, Typography, Avatar, IconButton, CircularProgres
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useSnackbar } from "../components/AppSnackbar";
-import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { fetchWithAuth, API_URL } from "../utils/api";
 
 export default function ProfilePage() {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -111,7 +111,7 @@ export default function ProfilePage() {
       
       <Box sx={{ position: "relative", width: 96, height: 96, mx: "auto", mb: 2 }}>
         <Avatar 
-          src={profileImage ? `${BASE_URL}${profileImage}` : ""} 
+          src={profileImage || ""} 
           sx={{ width: 96, height: 96 }}
         >
           {!profileImage && `${form.firstName?.[0] || ''}${form.lastName?.[0] || ''}`}

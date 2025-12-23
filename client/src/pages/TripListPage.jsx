@@ -200,23 +200,39 @@ export default function TripListPage() {
               
               {selectedBooking.messages && selectedBooking.messages.length > 0 ? (
                 <List sx={{ maxHeight: 200, overflow: "auto", bgcolor: "background.paper" }}>
-                  {selectedBooking.messages.map((msg, idx) => (
-                    <ListItem key={idx} alignItems="flex-start">
-                      <ListItemAvatar>
-                        <Avatar src={msg.sender?.profileImagePath ? `${BASE_URL}${msg.sender.profileImagePath}` : undefined}>
-                          {!msg.sender?.profileImagePath && <PersonIcon />}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="caption" color="text.secondary">
-                            {msg.sender?.firstName || "User"} - {new Date(msg.timestamp).toLocaleString()}
-                          </Typography>
-                        }
-                        secondary={msg.text}
-                      />
-                    </ListItem>
-                  ))}
+                  {selectedBooking.messages.map((msg, idx) => {
+                    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+                    const isCurrentUser = msg.sender?._id === currentUser.id;
+                    const profilePhotoUrl = msg.sender?.profileImagePath || "";
+                    
+                    return (
+                      <ListItem 
+                        key={idx} 
+                        alignItems="flex-start"
+                        sx={{
+                          bgcolor: isCurrentUser 
+                            ? (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light'
+                            : (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+                          borderRadius: 1,
+                          mb: 1
+                        }}
+                      >
+                        <ListItemAvatar>
+                          <Avatar src={profilePhotoUrl}>
+                            {!profilePhotoUrl && <PersonIcon />}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Typography variant="caption" color="text.secondary">
+                              {msg.sender?.firstName || "User"} - {new Date(msg.timestamp).toLocaleString()}
+                            </Typography>
+                          }
+                          secondary={msg.text}
+                        />
+                      </ListItem>
+                    );
+                  })}
                 </List>
               ) : (
                 <Typography variant="body2" color="text.secondary">No messages yet</Typography>

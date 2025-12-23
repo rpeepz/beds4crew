@@ -36,10 +36,10 @@ router.post("/register", uploadSingle, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Get profile image path if uploaded
+    // Get profile image path if uploaded (Cloudinary URL)
     let profileImagePath = "";
     if (req.file) {
-      profileImagePath = `/uploads/${req.file.filename}`;
+      profileImagePath = req.file.path; // Cloudinary returns full URL in path
     }
 
     // Create user with sanitized inputs
@@ -229,7 +229,10 @@ router.post("/profile/photo", verifyToken, uploadSingle, async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const newProfileImagePath = `/uploads/${req.file.filename}`;
+    // Cloudinary returns the full URL in req.file.path
+    const newProfileImagePath = req.file.path;
+    
+    console.log("Uploaded file info:", { path: req.file.path, filename: req.file.filename });
     
     // Get user's old profile image path
     const user = await User.findById(req.user.id);
@@ -239,14 +242,20 @@ router.post("/profile/photo", verifyToken, uploadSingle, async (req, res) => {
     user.profileImagePath = newProfileImagePath;
     await user.save();
 
-    // Delete old profile image if it exists
-    if (oldProfileImagePath) {
-      const fs = require('fs');
-      const path = require('path');
-      const oldFilePath = path.join(__dirname, '..', 'public', oldProfileImagePath);
+    // Delete old profile image from Cloudinary if it exists
+    if (oldProfileImagePath && oldProfileImagePath.includes('cloudinary')) {
+      const { cloudinary } = require('../utils/fileUpload');
+      // Extract public_id from Cloudinary URL
+      const urlParts = oldProfileImagePath.split('/');
+      const filenameWithExt = urlParts[urlParts.length - 1];
+      const filename = filenameWithExt.split('.')[0];
+      const publicId = `profile-images/${filename}`;
       
-      fs.unlink(oldFilePath, (err) => {
-        if (err) console.error("Failed to delete old profile image:", err);
+      console.log("Deleting old image with public_id:", publicId);
+      
+      cloudinary.uploader.destroy(publicId, (err, result) => {
+        if (err) console.error("Failed to delete old profile image from Cloudinary:", err);
+        else console.log("Old image deleted:", result);
       });
     }
 
@@ -255,6 +264,7 @@ router.post("/profile/photo", verifyToken, uploadSingle, async (req, res) => {
       profileImagePath: newProfileImagePath 
     });
   } catch (error) {
+    console.error("Profile photo upload error:", error);
     res.status(500).json({ message: "Failed to upload profile photo", error: error.message });
   }
 });
@@ -274,17 +284,26 @@ router.delete("/profile/photo", verifyToken, async (req, res) => {
     user.profileImagePath = "";
     await user.save();
 
-    // Delete the file from disk
-    const fs = require('fs');
-    const path = require('path');
-    const filePath = path.join(__dirname, '..', 'public', oldProfileImagePath);
-    
-    fs.unlink(filePath, (err) => {
-      if (err) console.error("Failed to delete profile image file:", err);
-    });
+    // Delete the file from Cloudinary if it's a Cloudinary URL
+    if (oldProfileImagePath.includes('cloudinary')) {
+      const { cloudinary } = require('../utils/fileUpload');
+      // Extract public_id from Cloudinary URL
+      const urlParts = oldProfileImagePath.split('/');
+      const filenameWithExt = urlParts[urlParts.length - 1];
+      const filename = filenameWithExt.split('.')[0];
+      const publicId = `profile-images/${filename}`;
+      
+      console.log("Deleting image with public_id:", publicId);
+      
+      cloudinary.uploader.destroy(publicId, (err, result) => {
+        if (err) console.error("Failed to delete profile image from Cloudinary:", err);
+        else console.log("Image deleted:", result);
+      });
+    }
 
     res.json({ message: "Profile photo removed successfully" });
   } catch (error) {
+    console.error("Profile photo deletion error:", error);
     res.status(500).json({ message: "Failed to remove profile photo", error: error.message });
   }
 });
