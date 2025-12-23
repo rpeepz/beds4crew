@@ -74,15 +74,25 @@ router.post("/login", async (req, res) => {
         .json({ message: "Email and password required" });
     }
 
+    // Check if JWT secrets are configured
+    if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+      console.error("❌ JWT secrets not configured!");
+      return res.status(500).json({ 
+        message: "Server configuration error. Please contact support." 
+      });
+    }
+
     // Lookup user with lean query for better performance
     const user = await User.findOne({ email }).lean();
     if (!user) {
+      console.log(`Login attempt failed: User not found for email ${email}`);
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // Password comparison
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log(`Login attempt failed: Invalid password for email ${email}`);
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -96,6 +106,8 @@ router.post("/login", async (req, res) => {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     });
     await refreshTokenDoc.save();
+
+    console.log(`✅ User logged in successfully: ${email}`);
 
     // Return tokens + user info
     return res.json({
@@ -111,6 +123,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Login error:", error);
     return res
       .status(500)
       .json({ message: "Login failed", error: error.message });
