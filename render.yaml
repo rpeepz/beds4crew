@@ -4,8 +4,8 @@ services:
     name: beds4crew
     env: node
     region: oregon
-    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
-    startCommand: cd server && npm start
+    buildCommand: npm install --prefix client && npm run build --prefix client && npm install --prefix server --omit=dev
+    startCommand: node server/index.js
     envVars:
       - key: NODE_ENV
         value: production
