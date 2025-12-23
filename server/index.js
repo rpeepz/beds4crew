@@ -79,32 +79,35 @@ if (!mongoURL) {
 // Basic test route
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to Beds4Crew API" });
-  // res.redirect("https://beds4crew-gqib.onrender.com/");
 });
 
-// 404 handler for API routes
-app.use("/api/*", (req, res) => {
-  res.status(404).json({ message: "API route not found" });
+// SPA fallback - serve index.html for all non-API routes
+// This catches ALL routes that don't match the above
+app.use((req, res, next) => {
+  // Skip API routes - let them 404 naturally
+  if (req.path.startsWith("/api/")) {
+    return next();
+  }
+  
+  // Skip uploaded files
+  if (req.path.startsWith("/uploads/")) {
+    return next();
+  }
+  
+  // For all other routes, serve index.html (for React Router)
+  const indexPath = path.join(__dirname, "../client/dist/index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.status(404).json({ 
+        message: "Client app not built. Run 'npm run build' in the client directory." 
+      });
+    }
+  });
 });
-
-// For all other routes, express.static will serve the React app
-// If no file matches, it will fall through to the next handler
 
 // 404 handler
 app.use((req, res) => {
-  // If we're here and it's not an API route, serve index.html for client-side routing
-  if (!req.path.startsWith("/api/")) {
-    const indexPath = path.join(__dirname, "../client/dist/index.html");
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        res.status(404).json({ 
-          message: "Client app not built. Run 'npm run build' in the client directory." 
-        });
-      }
-    });
-  } else {
-    res.status(404).json({ message: "Route not found" });
-  }
+  res.status(404).json({ message: "Route not found" });
 });
 
 // Global error handler
