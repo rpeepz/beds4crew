@@ -36,6 +36,7 @@ export default function PropertyDetailPage() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletePropertyLoading, setDeletePropertyLoading] = useState(false);
+  const [bedAvailability, setBedAvailability] = useState({});
   const snackbar = useSnackbar();
   const navigate = useNavigate();
 
@@ -68,6 +69,72 @@ export default function PropertyDetailPage() {
       setIsOwner(currentUser.id === property.ownerHost._id);
     }
   }, [currentUser, property]);
+
+  // Check bed availability when dates change
+  useEffect(() => {
+    if (!property || !startDate || !endDate || isOwner) return;
+    
+    checkBedAvailability();
+  }, [startDate, endDate, property, isOwner]);
+
+  const checkBedAvailability = () => {
+    if (!startDate || !endDate) {
+      setBedAvailability({});
+      return;
+    }
+
+    const availability = {};
+
+    property.rooms?.forEach((room, roomIdx) => {
+      room.beds.forEach((bed, bedIdx) => {
+        const key = `${roomIdx}-${bedIdx}`;
+        
+        // Check if bed is marked as unavailable in property
+        if (!bed.isAvailable) {
+          availability[key] = false;
+          return;
+        }
+
+        // Check against bookings
+        const isBookedInRange = bookings.some(booking => {
+          const bookingStart = dayjs(booking.startDate);
+          const bookingEnd = dayjs(booking.endDate);
+          
+          // Check if this booking overlaps with selected dates
+          const overlaps = startDate.isBefore(bookingEnd) && endDate.isAfter(bookingStart);
+          
+          if (!overlaps) return false;
+
+          // Check if this specific bed is booked
+          return booking.bookedBeds?.some(
+            bookedBed => bookedBed.roomIndex === roomIdx && bookedBed.bedIndex === bedIdx
+          );
+        });
+
+        // Check against blocked periods
+        const isBlockedInRange = property.blockedPeriods?.some(block => {
+          const blockStart = dayjs(block.startDate);
+          const blockEnd = dayjs(block.endDate);
+          
+          // Check if block overlaps with selected dates
+          const overlaps = startDate.isBefore(blockEnd) && endDate.isAfter(blockStart);
+          
+          if (!overlaps) return false;
+
+          // Check block type
+          if (block.blockType === 'entire') return true;
+          if (block.blockType === 'room' && block.roomIndex === roomIdx) return true;
+          if (block.blockType === 'bed' && block.roomIndex === roomIdx && block.bedIndex === bedIdx) return true;
+          
+          return false;
+        });
+
+        availability[key] = !isBookedInRange && !isBlockedInRange;
+      });
+    });
+
+    setBedAvailability(availability);
+  };
 
   const handleBook = async () => {
     // Check if user is logged in
@@ -398,7 +465,22 @@ export default function PropertyDetailPage() {
       {/* Rooms & Beds */}
       {property.rooms?.length > 0 && (
         <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={commonStyles.sectionTitle}>Rooms & Beds</Typography>
+          <Typography variant="h6" sx={commonStyles.sectionTitle}>
+            Rooms & Beds
+            {!isOwner && startDate && endDate && (
+              <Chip 
+                label={`Availability for ${dayjs(startDate).format('MMM D')} - ${dayjs(endDate).format('MMM D')}`}
+                size="small"
+                color="primary"
+                sx={{ ml: 2 }}
+              />
+            )}
+          </Typography>
+          {!isOwner && (!startDate || !endDate) && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Select dates in the booking section below to see bed availability
+            </Alert>
+          )}
           {property.rooms.map((room, roomIdx) => (
             <Card key={roomIdx} sx={{ 
               mb: 2, 
@@ -410,11 +492,34 @@ export default function PropertyDetailPage() {
                 {room.isPrivate ? "🔒 Private" : "🔓 Shared"} Room #{roomIdx + 1}
               </Typography>
               <Box sx={{ pl: 2 }}>
-                {room.beds.map((bed, bedIdx) => (
-                  <Typography key={bedIdx} variant="body2">
-                    • {bed.label} - ${bed.pricePerBed}/night {bed.isAvailable ? "✓" : "✗"}
-                  </Typography>
-                ))}
+                {room.beds.map((bed, bedIdx) => {
+                  const key = `${roomIdx}-${bedIdx}`;
+                  const isAvailable = !isOwner && startDate && endDate 
+                    ? bedAvailability[key] 
+                    : bed.isAvailable;
+                  
+                  return (
+                    <Typography 
+                      key={bedIdx} 
+                      variant="body2"
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        color: !isOwner && startDate && endDate && !isAvailable ? 'error.main' : 'inherit'
+                      }}
+                    >
+                      • {bed.label} - ${bed.pricePerBed}/night 
+                      <Chip 
+                        label={isAvailable ? "Available" : "Unavailable"}
+                        size="small"
+                        color={isAvailable ? "success" : "error"}
+                        icon={isAvailable ? <span>✓</span> : <span>✗</span>}
+                        sx={{ height: 20, fontSize: '0.75rem' }}
+                      />
+                    </Typography>
+                  );
+                })}
               </Box>
             </Card>
           ))}
