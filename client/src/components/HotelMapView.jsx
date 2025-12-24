@@ -102,8 +102,8 @@ export default function MapView({
   return (
     <MapContainer
       center={mapCenter}
-      zoom={10}
-      minZoom={3}
+      zoom={8}
+      minZoom={5}
       maxZoom={17}
       scrollWheelZoom={true}
       style={{ width: '100%', height: '100%', minHeight: '500px', zIndex: 0 }}
