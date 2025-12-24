@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet';
 import { Box, Typography, Button, List, ListItem, ListItemText } from '@mui/material';
 import L from 'leaflet';
+import { useTheme } from '@mui/material/styles';
 
 // Import Leaflet CSS - this ensures it's bundled correctly
 import 'leaflet/dist/leaflet.css';
@@ -82,6 +83,8 @@ export default function MapView({
   onPropertyClick = () => {},
 }) {
   const [expandedCluster, setExpandedCluster] = useState(null);
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
   // Validate center coordinates
   if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') {
@@ -100,14 +103,20 @@ export default function MapView({
     <MapContainer
       center={mapCenter}
       zoom={10}
-      minZoom={4}
-      maxZoom={13}
+      minZoom={3}
+      maxZoom={17}
       scrollWheelZoom={true}
       style={{ width: '100%', height: '100%', minHeight: '500px', zIndex: 0 }}
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url={isDarkMode 
+          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        }
+        attribution={isDarkMode
+          ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }
         maxZoom={17}
       />
 
@@ -118,9 +127,9 @@ export default function MapView({
         center={mapCenter}
         radius={radiusMeters}
         pathOptions={{
-          fillColor: '#4A90E2',
+          fillColor: isDarkMode ? '#90caf9' : '#4A90E2',
           fillOpacity: 0.1,
-          color: '#4A90E2',
+          color: isDarkMode ? '#90caf9' : '#4A90E2',
           weight: 2,
           dashArray: '5, 5',
         }}
@@ -145,17 +154,38 @@ export default function MapView({
                 icon={createMarkerIcon()}
               >
                 <Popup closeButton={true}>
-                  <Box sx={{ minWidth: '220px' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  <Box sx={{ 
+                    minWidth: '220px',
+                    bgcolor: isDarkMode ? '#1e1e1e' : '#ffffff',
+                    color: isDarkMode ? '#e0e0e0' : '#000000',
+                    p: 1
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      fontWeight: 600, 
+                      mb: 0.5,
+                      color: isDarkMode ? '#ffffff' : '#000000'
+                    }}>
                       {prop.title}
                     </Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                    <Typography variant="caption" sx={{ 
+                      display: 'block', 
+                      mb: 1,
+                      color: isDarkMode ? '#b0b0b0' : '#666666'
+                    }}>
                       {prop.address}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#2E7D32', mb: 1 }}>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600, 
+                      color: isDarkMode ? '#66bb6a' : '#2E7D32', 
+                      mb: 1 
+                    }}>
                       ${prop.pricePerNight}/night
                     </Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                    <Typography variant="caption" sx={{ 
+                      display: 'block', 
+                      mb: 1,
+                      color: isDarkMode ? '#b0b0b0' : '#666666'
+                    }}>
                       {prop.category} • {prop.type}
                     </Typography>
                     <Button
@@ -185,8 +215,19 @@ export default function MapView({
                 icon={createClusterIcon(group.length)}
               >
                 <Popup closeButton={true}>
-                  <Box sx={{ minWidth: '280px', maxHeight: '400px', overflowY: 'auto' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  <Box sx={{ 
+                    minWidth: '280px', 
+                    maxHeight: '400px', 
+                    overflowY: 'auto',
+                    bgcolor: isDarkMode ? '#1e1e1e' : '#ffffff',
+                    color: isDarkMode ? '#e0e0e0' : '#000000',
+                    p: 1
+                  }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      fontWeight: 600, 
+                      mb: 1,
+                      color: isDarkMode ? '#ffffff' : '#000000'
+                    }}>
                       {group.length} properties in this area
                     </Typography>
                     <List sx={{ p: 0 }}>
@@ -196,26 +237,42 @@ export default function MapView({
                           sx={{
                             p: 1,
                             mb: 1,
-                            bgcolor: '#f5f5f5',
+                            bgcolor: isDarkMode ? '#2a2a2a' : '#f5f5f5',
                             borderRadius: '4px',
                             flexDirection: 'column',
                             alignItems: 'flex-start',
                           }}
                         >
                           <Box sx={{ width: '100%' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            <Typography variant="subtitle2" sx={{ 
+                              fontWeight: 600, 
+                              mb: 0.5,
+                              color: isDarkMode ? '#ffffff' : '#000000'
+                            }}>
                               {prop.title}
                             </Typography>
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ 
+                              display: 'block', 
+                              mb: 0.5,
+                              color: isDarkMode ? '#b0b0b0' : '#666666'
+                            }}>
                               {prop.address}
                             </Typography>
                             <Typography
                               variant="body2"
-                              sx={{ fontWeight: 600, color: '#2E7D32', mb: 0.5 }}
+                              sx={{ 
+                                fontWeight: 600, 
+                                color: isDarkMode ? '#66bb6a' : '#2E7D32', 
+                                mb: 0.5 
+                              }}
                             >
                               ${prop.pricePerNight}/night
                             </Typography>
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                            <Typography variant="caption" sx={{ 
+                              display: 'block', 
+                              mb: 1,
+                              color: isDarkMode ? '#b0b0b0' : '#666666'
+                            }}>
                               {prop.category} • {prop.type}
                             </Typography>
                             <Button
