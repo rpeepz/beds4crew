@@ -65,10 +65,32 @@ export default function BrowsePage() {
 
   // Fetch all properties from DB
   useEffect(() => {
+    console.log('🔍 BrowsePage: Starting to fetch properties from API');
     setLoading(true);
     fetch(`${API_URL}/properties`)
-      .then(res => res.json())
+      .then(res => {
+        console.log('📦 BrowsePage: Received response from API', res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log('📊 BrowsePage: Raw data from API:', data);
+        console.log('📊 BrowsePage: Number of properties:', data.length);
+        
+        // Log first property raw data
+        if (data.length > 0) {
+          console.log('📊 BrowsePage: First property raw:', data[0]);
+          console.log('📊 BrowsePage: First property coords:', {
+            latitude: data[0].latitude,
+            longitude: data[0].longitude,
+            hasLat: 'latitude' in data[0],
+            hasLng: 'longitude' in data[0],
+            latValue: data[0].latitude,
+            lngValue: data[0].longitude,
+            latType: typeof data[0].latitude,
+            lngType: typeof data[0].longitude
+          });
+        }
+        
         // Filter to only active properties, but make lat/lng optional for list view
         const activeProps = data.filter(p => p.isActive !== false);
         setAllProperties(activeProps);
@@ -76,13 +98,28 @@ export default function BrowsePage() {
         // Log how many properties have coordinates vs don't
         const withCoords = activeProps.filter(p => p.latitude && p.longitude).length;
         const withoutCoords = activeProps.length - withCoords;
-        console.log(`Loaded ${activeProps.length} properties: ${withCoords} with coordinates, ${withoutCoords} without`);
+        console.log(`✅ BrowsePage: Loaded ${activeProps.length} properties: ${withCoords} with coordinates, ${withoutCoords} without`);
+        
+        // Log details of properties without coords
+        if (withoutCoords > 0) {
+          const propsWithoutCoords = activeProps.filter(p => !p.latitude || !p.longitude);
+          console.log('❌ BrowsePage: Properties without coordinates:', propsWithoutCoords.map(p => ({
+            id: p._id,
+            title: p.title,
+            address: p.address,
+            latitude: p.latitude,
+            longitude: p.longitude
+          })));
+        }
       })
       .catch(err => {
-        console.error('Failed to fetch properties:', err);
+        console.error('❌ BrowsePage: Failed to fetch properties:', err);
         snackbar('Failed to load properties', 'error');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        console.log('🏁 BrowsePage: Finished loading properties');
+        setLoading(false);
+      });
   }, [snackbar]);
 
   // Calculate distance in miles between two lat/lng points using Haversine formula
