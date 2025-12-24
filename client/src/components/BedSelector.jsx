@@ -288,11 +288,19 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
       )}
 
       {totalPrice > 0 && (
-        <Card sx={{ p: 2, bgcolor: 'primary.light', mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+        <Card sx={{ 
+          p: 2, 
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1b5e20' : '#e8f5e9',
+          border: (theme) => `2px solid ${theme.palette.mode === 'dark' ? '#2e7d32' : '#4caf50'}`,
+          mt: 2 
+        }}>
+          <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#a5d6a7' : '#2e7d32' }}>
             {selectedBeds.length} {selectedBeds.length === 1 ? 'bed' : 'beds'} × {nights} {nights === 1 ? 'night' : 'nights'}
           </Typography>
-          <Typography variant="h6">
+          <Typography variant="h6" sx={{ 
+            color: (theme) => theme.palette.mode === 'dark' ? '#66bb6a' : '#1b5e20',
+            fontWeight: 700 
+          }}>
             Total: ${totalPrice}
           </Typography>
         </Card>
