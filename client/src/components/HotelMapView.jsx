@@ -99,13 +99,16 @@ export default function MapView({
   return (
     <MapContainer
       center={mapCenter}
-      zoom={3}
+      zoom={10}
+      minZoom={4}
+      maxZoom={13}
       scrollWheelZoom={true}
       style={{ width: '100%', height: '100%', minHeight: '500px', zIndex: 0 }}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        maxZoom={17}
       />
 
       <MapUpdater center={center} />
