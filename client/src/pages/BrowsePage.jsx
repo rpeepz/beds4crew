@@ -311,6 +311,32 @@ export default function BrowsePage() {
         Browse Properties
       </Typography>
 
+      {/* DEBUG PANEL - REMOVE AFTER FIXING */}
+      <Card sx={{ p: 2, mb: 3, bgcolor: '#fff3cd', border: '2px solid #ffc107' }}>
+        <Typography variant="h6" sx={{ color: '#856404', mb: 1 }}>
+          🐛 DEBUG INFO
+        </Typography>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          Total Properties: {allProperties.length}<br/>
+          With Coordinates: {allProperties.filter(p => p.latitude && p.longitude).length}<br/>
+          Filtered (in radius): {filteredPropertiesWithCoords.length}<br/>
+          Grouped Markers: {groupedMarkers.length}<br/>
+          Center: {center.lat}, {center.lng}<br/>
+          Radius: {radius} miles<br/>
+          <br/>
+          {allProperties.length > 0 && (
+            <>
+              First Property Sample:<br/>
+              - Title: {allProperties[0].title}<br/>
+              - Lat: {allProperties[0].latitude} (type: {typeof allProperties[0].latitude})<br/>
+              - Lng: {allProperties[0].longitude} (type: {typeof allProperties[0].longitude})<br/>
+              - Has Lat? {allProperties[0].latitude ? 'YES' : 'NO'}<br/>
+              - Has Lng? {allProperties[0].longitude ? 'YES' : 'NO'}<br/>
+            </>
+          )}
+        </Typography>
+      </Card>
+
       {/* Controls Section */}
       <Card sx={{ p: 2, mb: 3, maxWidth: '600px' }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
