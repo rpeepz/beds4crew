@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -86,7 +86,7 @@ export default function BrowsePage() {
   }, [snackbar]);
 
   // Calculate distance in miles between two lat/lng points using Haversine formula
-  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+  const calculateDistance = useCallback((lat1, lng1, lat2, lng2) => {
     const toRad = (x) => (x * Math.PI) / 180;
     const R = 3958.8; // Earth radius in miles
     const dLat = toRad(lat2 - lat1);
@@ -99,12 +99,12 @@ export default function BrowsePage() {
         Math.sin(dLng / 2);
     const c = 2 * Math.asin(Math.sqrt(a));
     return R * c;
-  };
+  }, []);
 
   // Calculate distance in meters
-  const calculateDistanceMeters = (lat1, lng1, lat2, lng2) => {
+  const calculateDistanceMeters = useCallback((lat1, lng1, lat2, lng2) => {
     return calculateDistance(lat1, lng1, lat2, lng2) * 1609.34;
-  };
+  }, [calculateDistance]);
 
   // Filter properties within radius (only those with coordinates)
   const filteredProperties = useMemo(() => {
@@ -127,7 +127,7 @@ export default function BrowsePage() {
     });
     
     return filtered;
-  }, [allProperties, center, radius]);
+  }, [allProperties, center, radius, calculateDistance]);
 
   // Group properties by proximity (CLUSTER_RADIUS_METERS)
   const groupedMarkers = useMemo(() => {
@@ -172,7 +172,14 @@ export default function BrowsePage() {
     });
 
     return groups;
-  }, [filteredProperties]);
+  }, [filteredProperties, calculateDistanceMeters]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProperties.length / RESULTS_PER_PAGE);
+  const paginatedProperties = useMemo(() => {
+    const start = (currentPage - 1) * RESULTS_PER_PAGE;
+    return filteredProperties.slice(start, start + RESULTS_PER_PAGE);
+  }, [filteredProperties, currentPage]);
 
   const handleLocationChange = (e) => {
     const selected = POPULAR_LOCATIONS.find(l => l.label === e.target.value);
@@ -371,19 +378,14 @@ export default function BrowsePage() {
       {/* Results List Section */}
       <Box>
         <Typography variant="h6" mb={2}>
-          All Properties ({allProperties.length})
-          {filteredProperties.length < allProperties.length && (
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-              ({filteredProperties.length} on map)
-            </Typography>
-          )}
+          Properties in Area ({filteredProperties.length})
         </Typography>
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : allProperties.length > 0 ? (
+        ) : paginatedProperties.length > 0 ? (
           <>
             <Box
               sx={{
@@ -393,7 +395,7 @@ export default function BrowsePage() {
                 mb: 3,
               }}
             >
-              {allProperties.slice((currentPage - 1) * RESULTS_PER_PAGE, currentPage * RESULTS_PER_PAGE).map(prop => (
+              {paginatedProperties.map(prop => (
                 <Card key={prop._id} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <CardMedia
                     component="img"
@@ -401,11 +403,7 @@ export default function BrowsePage() {
                     image={`${BASE_URL}${prop.images?.[0]?.path || prop.images?.[0]}` || 'https://via.placeholder.com/300x180?text=No+Image'}
                     alt={prop.title}
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      if (prop.latitude && prop.longitude) {
-                        setCenter({ lat: prop.latitude, lng: prop.longitude });
-                      }
-                    }}
+                    onClick={() => setCenter({ lat: prop.latitude, lng: prop.longitude })}
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" noWrap>
@@ -419,11 +417,6 @@ export default function BrowsePage() {
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
                       {prop.category} • {prop.type}
-                      {!prop.latitude && !prop.longitude && (
-                        <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
-                          ⚠ Not on map
-                        </Typography>
-                      )}
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ pt: 0 }}>
@@ -450,10 +443,10 @@ export default function BrowsePage() {
             </Box>
 
             {/* Pagination */}
-            {Math.ceil(allProperties.length / RESULTS_PER_PAGE) > 1 && (
+            {totalPages > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                 <Pagination
-                  count={Math.ceil(allProperties.length / RESULTS_PER_PAGE)}
+                  count={totalPages}
                   page={currentPage}
                   onChange={(_, val) => setCurrentPage(val)}
                 />
@@ -462,7 +455,7 @@ export default function BrowsePage() {
           </>
         ) : (
           <Typography color="textSecondary" sx={{ textAlign: 'center', py: 4 }}>
-            No properties found.
+            No properties found within {radius} miles of {selectedLocation || 'this location'}.
           </Typography>
         )}
       </Box>
