@@ -25,6 +25,14 @@ import { useSnackbar } from '../components/AppSnackbar';
 import { fetchWithAuth, formatPriceDisplay, API_URL, BASE_URL } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
+// ========================================
+// IMMEDIATE LOG - THIS SHOULD ALWAYS SHOW
+// ========================================
+console.log('🚨🚨🚨 BrowsePage.jsx FILE LOADED 🚨🚨🚨');
+console.log('Current time:', new Date().toISOString());
+console.log('API_URL:', API_URL);
+console.log('BASE_URL:', BASE_URL);
+
 //TODO: Move to config file or generate based off existing data
 const POPULAR_LOCATIONS = [
   { label: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
@@ -41,6 +49,8 @@ const RESULTS_PER_PAGE = 10;
 const CLUSTER_RADIUS_METERS = 200;
 
 export default function BrowsePage() {
+  console.log('🚨🚨🚨 BrowsePage COMPONENT RENDERING 🚨🚨🚨');
+  
   const [allProperties, setAllProperties] = useState([]);
   const [center, setCenter] = useState(DEFAULT_LOCATION);
   const [radius, setRadius] = useState(DEFAULT_RADIUS_MILES);
