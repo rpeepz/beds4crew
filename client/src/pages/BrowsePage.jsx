@@ -25,20 +25,6 @@ import { useSnackbar } from '../components/AppSnackbar';
 import { fetchWithAuth, formatPriceDisplay, API_URL, BASE_URL } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
-// ========================================
-// IMMEDIATE LOG - THIS SHOULD ALWAYS SHOW
-// ========================================
-console.log('🚨🚨🚨 BrowsePage.jsx FILE LOADED 🚨🚨🚨');
-console.log('Current time:', new Date().toISOString());
-console.log('API_URL:', API_URL);
-console.log('BASE_URL:', BASE_URL);
-
-// EXTREME DEBUG - This will show even if console is broken
-if (typeof window !== 'undefined') {
-  window.BROWSE_PAGE_LOADED = true;
-  window.BROWSE_PAGE_TIMESTAMP = new Date().toISOString();
-}
-
 //TODO: Move to config file or generate based off existing data
 const POPULAR_LOCATIONS = [
   { label: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
@@ -55,8 +41,6 @@ const RESULTS_PER_PAGE = 10;
 const CLUSTER_RADIUS_METERS = 200;
 
 export default function BrowsePage() {
-  console.log('🚨🚨🚨 BrowsePage COMPONENT RENDERING 🚨🚨🚨');
-  
   const [allProperties, setAllProperties] = useState([]);
   const [center, setCenter] = useState(DEFAULT_LOCATION);
   const [radius, setRadius] = useState(DEFAULT_RADIUS_MILES);
@@ -81,61 +65,18 @@ export default function BrowsePage() {
 
   // Fetch all properties from DB
   useEffect(() => {
-    console.log('🔍 BrowsePage: Starting to fetch properties from API');
     setLoading(true);
     fetch(`${API_URL}/properties`)
-      .then(res => {
-        console.log('📦 BrowsePage: Received response from API', res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        console.log('📊 BrowsePage: Raw data from API:', data);
-        console.log('📊 BrowsePage: Number of properties:', data.length);
-        
-        // Log first property raw data
-        if (data.length > 0) {
-          console.log('📊 BrowsePage: First property raw:', data[0]);
-          console.log('📊 BrowsePage: First property coords:', {
-            latitude: data[0].latitude,
-            longitude: data[0].longitude,
-            hasLat: 'latitude' in data[0],
-            hasLng: 'longitude' in data[0],
-            latValue: data[0].latitude,
-            lngValue: data[0].longitude,
-            latType: typeof data[0].latitude,
-            lngType: typeof data[0].longitude
-          });
-        }
-        
-        // Filter to only active properties, but make lat/lng optional for list view
         const activeProps = data.filter(p => p.isActive !== false);
         setAllProperties(activeProps);
-        
-        // Log how many properties have coordinates vs don't
-        const withCoords = activeProps.filter(p => p.latitude && p.longitude).length;
-        const withoutCoords = activeProps.length - withCoords;
-        console.log(`✅ BrowsePage: Loaded ${activeProps.length} properties: ${withCoords} with coordinates, ${withoutCoords} without`);
-        
-        // Log details of properties without coords
-        if (withoutCoords > 0) {
-          const propsWithoutCoords = activeProps.filter(p => !p.latitude || !p.longitude);
-          console.log('❌ BrowsePage: Properties without coordinates:', propsWithoutCoords.map(p => ({
-            id: p._id,
-            title: p.title,
-            address: p.address,
-            latitude: p.latitude,
-            longitude: p.longitude
-          })));
-        }
       })
       .catch(err => {
-        console.error('❌ BrowsePage: Failed to fetch properties:', err);
+        console.error('Failed to fetch properties:', err);
         snackbar('Failed to load properties', 'error');
       })
-      .finally(() => {
-        console.log('🏁 BrowsePage: Finished loading properties');
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [snackbar]);
 
   // Calculate distance in miles between two lat/lng points using Haversine formula
@@ -163,30 +104,11 @@ export default function BrowsePage() {
 
   // Filter properties within radius (only those with coordinates)
   const filteredPropertiesWithCoords = useMemo(() => {
-    const filtered = allProperties.filter(p => {
-      // Only include properties with valid coordinates for map/distance filtering
-      if (!p.latitude || !p.longitude) {
-        console.log(`Property ${p.title} missing coords`);
-        return false;
-      }
+    return allProperties.filter(p => {
+      if (!p.latitude || !p.longitude) return false;
       const distance = calculateDistance(center.lat, center.lng, p.latitude, p.longitude);
-      console.log(`Distance from ${p.title}: ${distance.toFixed(2)} miles (limit: ${radius})`);
       return distance <= radius;
     });
-    
-    console.log('Filtered properties for map:', {
-      total: allProperties.length,
-      filtered: filtered.length,
-      center,
-      radius,
-      sample: filtered.slice(0, 2).map(p => ({
-        title: p.title,
-        lat: p.latitude,
-        lng: p.longitude
-      }))
-    });
-    
-    return filtered;
   }, [allProperties, center, radius, calculateDistance]);
 
   // All properties for list view (including those without coordinates)
@@ -197,7 +119,6 @@ export default function BrowsePage() {
   // Group properties by proximity (CLUSTER_RADIUS_METERS) - only for map
   const groupedMarkers = useMemo(() => {
     if (!filteredPropertiesWithCoords.length) {
-      console.log('No filtered properties to group');
       return [];
     }
 
@@ -229,12 +150,6 @@ export default function BrowsePage() {
 
       groups.push(cluster);
     }
-
-    console.log('Grouped markers:', {
-      groupCount: groups.length,
-      totalProperties: filteredPropertiesWithCoords.length,
-      groupSizes: groups.map(g => g.length)
-    });
 
     return groups;
   }, [filteredPropertiesWithCoords, calculateDistanceMeters]);
@@ -318,44 +233,6 @@ export default function BrowsePage() {
         Browse Properties
       </Typography>
 
-      {/* DEBUG PANEL - REMOVE AFTER FIXING */}
-      <Card sx={{ p: 2, mb: 3, bgcolor: '#fff3cd', border: '2px solid #ffc107' }}>
-        <Typography variant="h6" sx={{ color: '#856404', mb: 1 }}>
-          🐛 DEBUG INFO
-        </Typography>
-        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-          Total Properties: {allProperties.length}<br/>
-          With Coordinates: {allProperties.filter(p => p.latitude && p.longitude).length}<br/>
-          Filtered (in radius): {filteredPropertiesWithCoords.length}<br/>
-          Grouped Markers: {groupedMarkers.length}<br/>
-          Center: {center.lat}, {center.lng}<br/>
-          Radius: {radius} miles<br/>
-          <br/>
-          {allProperties.length > 0 && (
-            <>
-              First Property Sample:<br/>
-              - Title: {allProperties[0].title}<br/>
-              - Lat: {allProperties[0].latitude} (type: {typeof allProperties[0].latitude})<br/>
-              - Lng: {allProperties[0].longitude} (type: {typeof allProperties[0].longitude})<br/>
-              - Has Lat? {allProperties[0].latitude ? 'YES' : 'NO'}<br/>
-              - Has Lng? {allProperties[0].longitude ? 'YES' : 'NO'}<br/>
-              - Distance: {calculateDistance(center.lat, center.lng, allProperties[0].latitude, allProperties[0].longitude).toFixed(2)} miles<br/>
-              - Within radius? {calculateDistance(center.lat, center.lng, allProperties[0].latitude, allProperties[0].longitude) <= radius ? 'YES' : 'NO'}<br/>
-              <br/>
-              <strong>ALL PROPERTIES DISTANCES:</strong><br/>
-              {allProperties.filter(p => p.latitude && p.longitude).map((p, idx) => {
-                const dist = calculateDistance(center.lat, center.lng, p.latitude, p.longitude);
-                return (
-                  <span key={idx}>
-                    {idx + 1}. {p.title}: {dist.toFixed(2)} miles {dist <= radius ? '✓' : '✗'}<br/>
-                  </span>
-                );
-              })}
-            </>
-          )}
-        </Typography>
-      </Card>
-
       {/* Controls Section */}
       <Card sx={{ p: 2, mb: 3, maxWidth: '600px' }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -398,7 +275,7 @@ export default function BrowsePage() {
                 {allPropertiesForList.length} total properties
                 <br />
                 <Typography variant="caption" component="span">
-                  ({filteredPropertiesWithCoords.length} with map location)
+                  ({filteredPropertiesWithCoords.length} within {radius} miles)
                 </Typography>
               </>
             )}
@@ -476,12 +353,10 @@ export default function BrowsePage() {
         ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', p: 3 }}>
             <Typography color="text.secondary" textAlign="center">
-              No properties with map coordinates found within {radius} miles.
+              No properties found within {radius} miles.
               <br />
               <Typography variant="caption" component="span">
-                {allPropertiesForList.length > 0 
-                  ? `${allPropertiesForList.length} properties available but don't have coordinates yet. Check the list below.`
-                  : 'Try increasing the search radius or selecting a different location.'}
+                Try increasing the search radius or selecting a different location.
               </Typography>
             </Typography>
           </Box>
@@ -491,7 +366,7 @@ export default function BrowsePage() {
       {/* Results List Section */}
       <Box>
         <Typography variant="h6" mb={2}>
-          All Properties ({allPropertiesForList.length})
+          Properties in Area ({filteredPropertiesWithCoords.length})
         </Typography>
 
         {loading ? (
@@ -516,7 +391,11 @@ export default function BrowsePage() {
                     image={`${BASE_URL}${prop.images?.[0]?.path || prop.images?.[0]}` || 'https://via.placeholder.com/300x180?text=No+Image'}
                     alt={prop.title}
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => setCenter({ lat: prop.latitude, lng: prop.longitude })}
+                    onClick={() => {
+                      if (prop.latitude && prop.longitude) {
+                        setCenter({ lat: prop.latitude, lng: prop.longitude });
+                      }
+                    }}
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" noWrap>
