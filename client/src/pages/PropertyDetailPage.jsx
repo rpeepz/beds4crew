@@ -77,6 +77,10 @@ export default function PropertyDetailPage() {
     }
   }, [currentUser, property]);
 
+  const handleBookingSelectionChange = useCallback((selection) => {
+    setBookingSelection(selection);
+  }, []);
+
   const handleBook = async () => {
     // Check if user is logged in
     if (!currentUser || !currentUser.id) {
@@ -574,7 +578,7 @@ export default function PropertyDetailPage() {
               startDate={startDate}
               endDate={endDate}
               existingBookings={bookings}
-              onSelectionChange={setBookingSelection}
+              onSelectionChange={handleBookingSelectionChange}
             />
           )}
 
