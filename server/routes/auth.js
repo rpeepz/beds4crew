@@ -5,6 +5,7 @@ const verifyToken = require("../middleware/auth");
 const { uploadSingle } = require("../utils/fileUpload");
 const { generateTokens } = require("../utils/tokenHelpers");
 const { validateEmail, validatePassword, sanitizeInput } = require("../utils/validation");
+const emailService = require("../utils/emailService");
 
 const User = require("../models/User");
 const RefreshToken = require("../models/RefreshToken");
@@ -54,6 +55,12 @@ router.post("/register", uploadSingle, async (req, res) => {
     });
 
     await user.save();
+
+    // Send welcome email if preference is enabled (non-blocking - don't wait for it)
+    if (user.emailPreferences?.welcomeEmail !== false) {
+      emailService.sendWelcomeEmail(user.email, user.firstName)
+        .catch(err => console.error('Failed to send welcome email:', err));
+    }
 
     return res
       .status(201)

@@ -50,6 +50,9 @@ app.use("/api/users", userRoutes);
 const geocodingRouter = require('./routes/geocoding');
 app.use('/api/geocoding', geocodingRouter);
 
+const emailPreferencesRoutes = require("./routes/emailPreferences");
+app.use("/api/email-preferences", emailPreferencesRoutes);
+
 // MongoDB Connection with optimizations
 const mongoURL = process.env.MONGO_URL;
 
