@@ -1,82 +1,44 @@
-const nodemailer = require("nodemailer");
+const sgMail = require('@sendgrid/mail');
 
-// Create reusable transporter
-const createTransporter = () => {
-  // For development: use Ethereal (fake SMTP) or your actual SMTP
-  // For production: use SendGrid, Mailgun, AWS SES, etc.
-  
-  if (process.env.NODE_ENV === "production") {
-    // Production SMTP configuration
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 20000,
-    });
-  } else {
-    // Development: Use Ethereal for testing or your dev SMTP
-    // You can create a test account at https://ethereal.email
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.ethereal.email",
-      port: process.env.SMTP_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || "your-test-email@ethereal.email",
-        pass: process.env.SMTP_PASSWORD || "your-test-password",
-      },
-    });
-  }
-};
+// Configure SendGrid
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('✅ SendGrid Web API configured');
+}
 
-// Base email sender
+// Base email sender using SendGrid Web API
 const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    console.log('📧 Email config check:', {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      user: process.env.SMTP_USER,
-      from: process.env.EMAIL_FROM,
-      hasPassword: !!process.env.SMTP_PASSWORD,
-      passwordLength: process.env.SMTP_PASSWORD?.length
-    });
-
-    const transporter = createTransporter();
-    
-    // Verify transporter connection
-    console.log('🔌 Verifying SMTP connection...');
-    try {
-      await transporter.verify();
-      console.log('✅ SMTP connection verified');
-    } catch (verifyError) {
-      console.error('❌ SMTP verification failed:', verifyError.message);
-      throw verifyError;
+    // Check if SendGrid is configured
+    if (!process.env.SENDGRID_API_KEY) {
+      console.error('❌ SENDGRID_API_KEY not configured');
+      return { success: false, error: 'SendGrid API key not configured' };
     }
-    
-    const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Beds4Crew'}" <${process.env.EMAIL_FROM || 'noreply@beds4crew.com'}>`,
+
+    const msg = {
       to,
+      from: {
+        email: process.env.EMAIL_FROM || 'noreply@beds4crew.com',
+        name: process.env.EMAIL_FROM_NAME || 'Beds4Crew'
+      },
       subject,
       html,
-      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for text version
+      text: text || html.replace(/<[^>]*>/g, ''),
     };
 
-    console.log(`📤 Sending email to ${to}...`);
+    console.log(`📤 Sending email via SendGrid Web API to ${to}...`);
     
-    const info = await transporter.sendMail(mailOptions);
+    const response = await sgMail.send(msg);
     
-    console.log(`✅ Email sent to ${to}: ${info.messageId}`);
-    console.log(`📊 Response:`, info.response);
+    console.log(`✅ Email sent to ${to}`);
+    console.log(`📊 Status: ${response[0].statusCode}`);
     
-    return { success: true, messageId: info.messageId };
+    return { success: true, statusCode: response[0].statusCode };
   } catch (error) {
     console.error("❌ Email sending failed:", error.message);
-    console.error("❌ Full error:", error);
+    if (error.response) {
+      console.error("❌ SendGrid error:", error.response.body);
+    }
     return { success: false, error: error.message };
   }
 };
