@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Box, Typography, Card, FormControl, InputLabel, Select, MenuItem, 
   Checkbox, FormControlLabel, Alert, Chip, Button, Divider
@@ -24,8 +24,8 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
     ? Math.floor((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24))
     : 0;
 
-  // Get all available beds
-  const getAvailableBeds = () => {
+  // Get all available beds (memoized to prevent infinite loops)
+  const availableBeds = useMemo(() => {
     if (!property.rooms) return [];
     
     const beds = [];
@@ -51,9 +51,7 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
       });
     });
     return beds;
-  };
-
-  const availableBeds = getAvailableBeds();
+  }, [property, existingBookings]);
 
   // Calculate total price
   useEffect(() => {
@@ -244,17 +242,16 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
             const guestNum = i + 1;
             return (
               <Box key={guestNum} sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <PersonIcon fontSize="small" color="primary" />
+                  <Typography variant="subtitle2">Guest {guestNum}</Typography>
+                </Box>
                 <FormControl fullWidth size="small">
-                  <InputLabel>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon fontSize="small" />
-                      Guest {guestNum}
-                    </Box>
-                  </InputLabel>
+                  <InputLabel>Select a bed</InputLabel>
                   <Select
                     value={guestBedAssignments[guestNum] || ''}
                     onChange={(e) => handleGuestBedAssignment(guestNum, e.target.value)}
-                    label={`Guest ${guestNum}`}
+                    label="Select a bed"
                   >
                     <MenuItem value="">
                       <em>Select a bed</em>
