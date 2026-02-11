@@ -34,6 +34,14 @@ const createTransporter = () => {
 // Base email sender
 const sendEmail = async ({ to, subject, html, text }) => {
   try {
+    console.log('📧 Email config check:', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
+      from: process.env.EMAIL_FROM,
+      hasPassword: !!process.env.SMTP_PASSWORD
+    });
+
     const transporter = createTransporter();
     
     const mailOptions = {
@@ -44,9 +52,10 @@ const sendEmail = async ({ to, subject, html, text }) => {
       text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for text version
     };
 
+    console.log(`📤 Sending email to ${to}...`);
     const info = await transporter.sendMail(mailOptions);
     
-    console.log(`Email sent to ${to}: ${info.messageId}`);
+    console.log(`✅ Email sent to ${to}: ${info.messageId}`);
     
     return { success: true, messageId: info.messageId };
   } catch (error) {
