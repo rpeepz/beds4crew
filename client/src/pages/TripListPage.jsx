@@ -93,13 +93,14 @@ export default function TripListPage() {
 
   return (
     <Box sx={commonStyles.contentContainer}>
-      <activeBookings.length > 0 ? (
+      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+        Your Trips
+      </Typography>
+
+      {/* Active Bookings */}
+      {activeBookings.length > 0 ? (
         <Grid container spacing={{ xs: 2, sm: 3 }}>
-          {activeBgraphy>
-      
-      {bookings.length > 0 ? (
-        <Grid container spacing={{ xs: 2, sm: 3 }}>
-          {bookings.map(bk => (
+          {activeBookings.map(bk => (
             <Grid item xs={12} sm={6} md={4} key={bk._id}>
               <Card sx={commonStyles.card}>
                 <CardMedia
@@ -166,9 +167,7 @@ export default function TripListPage() {
             </Grid>
           ))}
         </Grid>
-      ) : (
-        <NoTrips />
-      )}
+      ) : null}
 
       {/* Archived Trips Section */}
       {archivedBookings.length > 0 && (
