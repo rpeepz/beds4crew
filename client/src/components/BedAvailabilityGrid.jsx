@@ -33,6 +33,20 @@ export default function BedAvailabilityGrid({
     const start = dayjs(startDate).startOf('day');
     const end = dayjs(endDate).startOf('day');
 
+    // Check if there's a whole-property booking for these dates
+    const hasWholePropertyBooking = bookings.some(booking => {
+      if (booking.status !== "confirmed" && booking.status !== "pending") return false;
+      
+      const bookingStart = dayjs(booking.startDate).startOf('day');
+      const bookingEnd = dayjs(booking.endDate).startOf('day');
+      
+      // Check if dates overlap and booking is for whole property (empty bookedBeds)
+      if (bookingStart.isBefore(end) && bookingEnd.isAfter(start)) {
+        return !booking.bookedBeds || booking.bookedBeds.length === 0;
+      }
+      return false;
+    });
+
     property.rooms.forEach((room, roomIndex) => {
       room.beds.forEach((bed, bedIndex) => {
         // Check if the bed is blocked during this period
@@ -57,29 +71,31 @@ export default function BedAvailabilityGrid({
           }
         });
 
-        // Check if the bed is booked during this period
-        let isBooked = false;
+        // Check if the bed is booked during this period (or whole property is booked)
+        let isBooked = hasWholePropertyBooking;
         let bookingIds = [];
         
-        bookings.forEach((booking) => {
-          if (booking.status !== "confirmed" && booking.status !== "pending") return;
-          
-          const bookingStart = dayjs(booking.startDate).startOf('day');
-          const bookingEnd = dayjs(booking.endDate).startOf('day');
-          
-          // Check if dates overlap
-          if (bookingStart.isBefore(end) && bookingEnd.isAfter(start)) {
-            // Check if this specific bed is booked
-            const bedBooked = booking.bookedBeds?.some(
-              b => b.roomIndex === roomIndex && b.bedIndex === bedIndex
-            );
+        if (!hasWholePropertyBooking) {
+          bookings.forEach((booking) => {
+            if (booking.status !== "confirmed" && booking.status !== "pending") return;
             
-            if (bedBooked) {
-              isBooked = true;
-              bookingIds.push(booking._id);
+            const bookingStart = dayjs(booking.startDate).startOf('day');
+            const bookingEnd = dayjs(booking.endDate).startOf('day');
+            
+            // Check if dates overlap
+            if (bookingStart.isBefore(end) && bookingEnd.isAfter(start)) {
+              // Check if this specific bed is booked
+              const bedBooked = booking.bookedBeds?.some(
+                b => b.roomIndex === roomIndex && b.bedIndex === bedIndex
+              );
+              
+              if (bedBooked) {
+                isBooked = true;
+                bookingIds.push(booking._id);
+              }
             }
-          }
-        });
+          });
+        }
 
         availability.push({
           roomIndex,

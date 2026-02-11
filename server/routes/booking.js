@@ -129,7 +129,7 @@ router.get("/property/:propertyId", async (req, res) => {
       property: req.params.propertyId,
       status: { $in: ["confirmed", "pending"] }
     })
-      .select("startDate endDate status")
+      .select("startDate endDate status bookedBeds")
       .lean();
     res.json(bookings);
   } catch (error) {

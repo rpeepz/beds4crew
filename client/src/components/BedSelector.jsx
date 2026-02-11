@@ -29,6 +29,17 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
     if (!property.rooms) return [];
     
     const beds = [];
+    
+    // Check if there's a whole-property booking for these dates
+    const hasWholePropertyBooking = existingBookings.some(booking => 
+      (!booking.bookedBeds || booking.bookedBeds.length === 0)
+    );
+    
+    // If whole property is booked, no beds are available
+    if (hasWholePropertyBooking) {
+      return [];
+    }
+    
     property.rooms.forEach((room, roomIndex) => {
       room.beds.forEach((bed, bedIndex) => {
         // Check if bed is available and not booked

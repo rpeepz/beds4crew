@@ -55,7 +55,10 @@ export default function PropertyCalendar({
           
           if (availability) {
             // Count how many beds are booked
-            const bookedBedCount = booking.bookedBeds?.length || totalBeds;
+            // If bookedBeds is empty or undefined, it means whole property is booked
+            const bookedBedCount = (booking.bookedBeds && booking.bookedBeds.length > 0) 
+              ? booking.bookedBeds.length 
+              : totalBeds;
             availability.booked += bookedBedCount;
             availability.available = Math.max(0, availability.total - availability.booked - availability.blocked);
           }
