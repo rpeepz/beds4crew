@@ -56,17 +56,10 @@ router.post("/register", uploadSingle, async (req, res) => {
 
     await user.save();
 
-    console.log('✅ User registered:', user.email);
-    console.log('📧 Email preferences:', user.emailPreferences);
-
-    // Send welcome email if preference is enabled (non-blocking - don't wait for it)
+    // Send welcome email if preference is enabled (non-blocking)
     if (user.emailPreferences?.welcomeEmail !== false) {
-      console.log('📧 Attempting to send welcome email to:', user.email);
       emailService.sendWelcomeEmail(user.email, user.firstName)
-        .then(() => console.log('✅ Welcome email queued successfully'))
-        .catch(err => console.error('❌ Failed to send welcome email:', err.message));
-    } else {
-      console.log('⏭️  Welcome email disabled by user preferences');
+        .catch(err => console.error('Failed to send welcome email:', err.message));
     }
 
     return res

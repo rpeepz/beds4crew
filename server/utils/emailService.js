@@ -25,13 +25,10 @@ const sendEmail = async ({ to, subject, html, text }) => {
       html,
       text: text || html.replace(/<[^>]*>/g, ''),
     };
-
-    console.log(`📤 Sending email via SendGrid Web API to ${to}...`);
     
     const response = await sgMail.send(msg);
     
     console.log(`✅ Email sent to ${to}`);
-    console.log(`📊 Status: ${response[0].statusCode}`);
     
     return { success: true, statusCode: response[0].statusCode };
   } catch (error) {
