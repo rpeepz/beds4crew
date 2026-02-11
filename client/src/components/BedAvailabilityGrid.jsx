@@ -335,12 +335,6 @@ export default function BedAvailabilityGrid({
           </Box>
         </Card>
       ))}
-
-      {stats.available === 0 && (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          No beds are available for the selected dates. Please choose different dates.
-        </Alert>
-      )}
     </Box>
   );
 }

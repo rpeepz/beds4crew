@@ -18,7 +18,17 @@ const UserSchema = new mongoose.Schema(
 
     
     role: { type: String, enum: ["guest", "host"], default: "guest" },
-    hasPaid: { type: Boolean, default: false } // Flag for hosts who have paid
+    hasPaid: { type: Boolean, default: false }, // Flag for hosts who have paid
+    
+    // Email notification preferences
+    emailPreferences: {
+      bookingConfirmation: { type: Boolean, default: true },
+      bookingCancellation: { type: Boolean, default: true },
+      newBookingRequest: { type: Boolean, default: true },
+      newMessage: { type: Boolean, default: true },
+      welcomeEmail: { type: Boolean, default: true }
+      // Note: Password reset and email verification are always sent
+    }
   },
   { timestamps: true }
 );

@@ -1,8 +1,10 @@
 const express = require("express");
 const Booking = require("../models/Booking");
 const Property = require("../models/Property");
+const User = require("../models/User");
 const verifyToken = require("../middleware/auth");
 const { validateDateRange } = require("../utils/validation");
+const emailService = require("../utils/emailService");
 
 const router = express.Router();
 
@@ -90,6 +92,44 @@ router.post("/", verifyToken, async (req, res) => {
       bookedBeds: bookedBeds || []
     });
     await booking.save();
+    
+    // Send email notifications (non-blocking)
+    Promise.all([
+      // Notify guest about pending booking
+      User.findById(req.user.id).then(guest => {
+        if (guest?.email && guest.emailPreferences?.bookingConfirmation !== false) {
+          return emailService.sendBookingConfirmation(
+            guest.email,
+            guest.firstName,
+            property.title,
+            startDate,
+            endDate,
+            finalPrice,
+            booking._id
+          );
+        }
+      }),
+      // Notify host about new booking request
+      User.findById(property.ownerHost).then(host => {
+        if (host?.email && host.emailPreferences?.newBookingRequest !== false) {
+          return User.findById(req.user.id).then(guest => {
+            if (guest) {
+              return emailService.sendNewBookingNotification(
+                host.email,
+                host.firstName,
+                `${guest.firstName} ${guest.lastName}`,
+                property.title,
+                startDate,
+                endDate,
+                finalPrice,
+                booking._id
+              );
+            }
+          });
+        }
+      })
+    ]).catch(err => console.error('Failed to send booking emails:', err));
+    
     res.status(201).json(booking);
   } catch (error) {
     res.status(500).json({ message: "Booking failed", error: error.message });
@@ -174,6 +214,22 @@ router.put("/:id/confirm", verifyToken, async (req, res) => {
     booking.status = "confirmed";
     await booking.save();
     
+    // Populate booking with guest info for email
+    await booking.populate("guest property");
+    
+    // Send confirmation email to guest if preference is enabled (non-blocking)
+    if (booking.guest?.email && booking.guest.emailPreferences?.bookingConfirmation !== false) {
+      emailService.sendBookingConfirmation(
+        booking.guest.email,
+        booking.guest.firstName,
+        booking.property.title,
+        booking.startDate,
+        booking.endDate,
+        booking.totalPrice,
+        booking._id
+      ).catch(err => console.error('Failed to send confirmation email:', err));
+    }
+    
     res.json({ message: "Booking confirmed successfully", booking });
   } catch (error) {
     res.status(500).json({ message: "Failed to confirm booking", error: error.message });
@@ -239,6 +295,29 @@ router.put("/:id/cancel", verifyToken, async (req, res) => {
     
     booking.status = "cancelled";
     await booking.save();
+    
+    // Populate booking with guest and host info for emails
+    await booking.populate("guest host");
+    
+    // Send cancellation emails to both guest and host if preference is enabled (non-blocking)
+    Promise.all([
+      booking.guest?.email && booking.guest.emailPreferences?.bookingCancellation !== false ? emailService.sendBookingCancellation(
+        booking.guest.email,
+        booking.guest.firstName,
+        booking.property.title,
+        booking.startDate,
+        booking.endDate,
+        booking._id
+      ) : Promise.resolve(),
+      booking.host?.email && booking.host.emailPreferences?.bookingCancellation !== false ? emailService.sendBookingCancellation(
+        booking.host.email,
+        booking.host.firstName,
+        booking.property.title,
+        booking.startDate,
+        booking.endDate,
+        booking._id
+      ) : Promise.resolve()
+    ]).catch(err => console.error('Failed to send cancellation emails:', err));
     
     res.json({ message: "Booking cancelled successfully", booking });
   } catch (error) {
