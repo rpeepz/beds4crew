@@ -457,4 +457,95 @@ router.get("/:id/blocks", async (req, res) => {
   }
 });
 
+// Get bed availability for a property within a date range (public - for booking UI)
+router.get("/:id/bed-availability", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "startDate and endDate are required" });
+    }
+    
+    const property = await Property.findById(req.params.id).lean();
+    
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+    
+    // Get all bookings that overlap with the date range
+    const Booking = require("../models/Booking");
+    const overlappingBookings = await Booking.find({
+      property: req.params.id,
+      status: { $in: ["confirmed", "pending"] },
+      startDate: { $lte: new Date(endDate) },
+      endDate: { $gte: new Date(startDate) }
+    }).select("startDate endDate bookedBeds status").lean();
+    
+    // Calculate bed availability
+    const bedAvailability = [];
+    
+    property.rooms.forEach((room, roomIndex) => {
+      room.beds.forEach((bed, bedIndex) => {
+        // Check if bed is blocked
+        let isBlocked = false;
+        let blockReason = "";
+        
+        property.blockedPeriods?.forEach((block) => {
+          const blockStart = new Date(block.startDate);
+          const blockEnd = new Date(block.endDate);
+          const rangeStart = new Date(startDate);
+          const rangeEnd = new Date(endDate);
+          
+          // Check if dates overlap
+          if (blockStart <= rangeEnd && blockEnd >= rangeStart) {
+            if (block.blockType === "entire" || 
+               (block.blockType === "room" && block.roomIndex === roomIndex) ||
+               (block.blockType === "bed" && block.roomIndex === roomIndex && block.bedIndex === bedIndex)) {
+              isBlocked = true;
+              blockReason = block.reason || "Unavailable";
+            }
+          }
+        });
+        
+        // Check if bed is booked
+        let isBooked = false;
+        const bookingIds = [];
+        
+        overlappingBookings.forEach((booking) => {
+          const bedBooked = booking.bookedBeds?.some(
+            b => b.roomIndex === roomIndex && b.bedIndex === bedIndex
+          );
+          
+          if (bedBooked) {
+            isBooked = true;
+            bookingIds.push(booking._id);
+          }
+        });
+        
+        bedAvailability.push({
+          roomIndex,
+          bedIndex,
+          bedLabel: bed.label,
+          pricePerBed: bed.pricePerBed,
+          isPrivate: room.isPrivate,
+          isAvailable: bed.isAvailable && !isBooked && !isBlocked,
+          isBooked,
+          isBlocked,
+          blockReason: isBlocked ? blockReason : null,
+          bookingIds: isBooked ? bookingIds : []
+        });
+      });
+    });
+    
+    res.json({
+      propertyId: property._id,
+      startDate,
+      endDate,
+      bedAvailability
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch bed availability", error: error.message });
+  }
+});
+
 module.exports = router;
