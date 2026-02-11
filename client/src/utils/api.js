@@ -231,3 +231,33 @@ export const debounce = (func, wait) => {
     timeout = setTimeout(later, wait);
   };
 };
+
+// Fetch bed availability for a property within a date range
+export const fetchBedAvailability = async (propertyId, startDate, endDate) => {
+  try {
+    const start = typeof startDate === 'string' ? startDate : startDate.format('YYYY-MM-DD');
+    const end = typeof endDate === 'string' ? endDate : endDate.format('YYYY-MM-DD');
+    
+    const cacheKey = `bed-availability:${propertyId}:${start}:${end}`;
+    const cached = getCached(cacheKey, 30); // Cache for 30 seconds
+    
+    if (cached) {
+      return cached;
+    }
+    
+    const response = await fetch(
+      `${API_URL}/properties/${propertyId}/bed-availability?startDate=${start}&endDate=${end}`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch bed availability');
+    }
+    
+    const data = await response.json();
+    setCache(cacheKey, data, 30);
+    return data;
+  } catch (error) {
+    console.error('Error fetching bed availability:', error);
+    throw error;
+  }
+};

@@ -11,6 +11,7 @@ import PhotoTile from "../components/PhotoTile";
 import PropertyCalendar from "../components/PropertyCalendar";
 import BlockPeriodManager from "../components/BlockPeriodManager";
 import BedSelector from "../components/BedSelector";
+import BedAvailabilityGrid from "../components/BedAvailabilityGrid";
 import { commonStyles } from "../utils/styleConstants";
 import EditIcon from "@mui/icons-material/Edit";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -449,10 +450,12 @@ export default function PropertyDetailPage() {
         </Card>
       )}
 
-      {/* Rooms & Beds */}
+      {/* Rooms & Beds - Enhanced with Dynamic Availability */}
       {property.rooms?.length > 0 && (
         <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
           <Typography variant="h6" sx={commonStyles.sectionTitle}>Rooms & Beds</Typography>
+          
+          {/* Show static room/bed list */}
           {property.rooms.map((room, roomIdx) => (
             <Card key={roomIdx} sx={{ 
               mb: 2, 
@@ -472,6 +475,20 @@ export default function PropertyDetailPage() {
               </Box>
             </Card>
           ))}
+          
+          {/* Show dynamic bed availability grid when dates are selected */}
+          {startDate && endDate && (
+            <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+              <BedAvailabilityGrid
+                property={property}
+                bookings={bookings}
+                blockedPeriods={property.blockedPeriods || []}
+                startDate={startDate}
+                endDate={endDate}
+                isOwner={isOwner}
+              />
+            </Box>
+          )}
         </Card>
       )}
 
@@ -491,6 +508,7 @@ export default function PropertyDetailPage() {
         <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={1} mb={showCalendar ? 2 : 0}>
           <Typography variant="h6">Availability</Typography>
           <Button
+            property={property}
             variant={showCalendar ? "contained" : "outlined"}
             startIcon={<CalendarMonthIcon />}
             onClick={() => setShowCalendar(!showCalendar)}
