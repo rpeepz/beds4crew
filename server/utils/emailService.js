@@ -42,10 +42,21 @@ const sendEmail = async ({ to, subject, html, text }) => {
       port: process.env.SMTP_PORT,
       user: process.env.SMTP_USER,
       from: process.env.EMAIL_FROM,
-      hasPassword: !!process.env.SMTP_PASSWORD
+      hasPassword: !!process.env.SMTP_PASSWORD,
+      passwordLength: process.env.SMTP_PASSWORD?.length
     });
 
     const transporter = createTransporter();
+    
+    // Verify transporter connection
+    console.log('🔌 Verifying SMTP connection...');
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP connection verified');
+    } catch (verifyError) {
+      console.error('❌ SMTP verification failed:', verifyError.message);
+      throw verifyError;
+    }
     
     const mailOptions = {
       from: `"${process.env.EMAIL_FROM_NAME || 'Beds4Crew'}" <${process.env.EMAIL_FROM || 'noreply@beds4crew.com'}>`,
@@ -56,13 +67,16 @@ const sendEmail = async ({ to, subject, html, text }) => {
     };
 
     console.log(`📤 Sending email to ${to}...`);
+    
     const info = await transporter.sendMail(mailOptions);
     
     console.log(`✅ Email sent to ${to}: ${info.messageId}`);
+    console.log(`📊 Response:`, info.response);
     
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("Email sending failed:", error);
+    console.error("❌ Email sending failed:", error.message);
+    console.error("❌ Full error:", error);
     return { success: false, error: error.message };
   }
 };
