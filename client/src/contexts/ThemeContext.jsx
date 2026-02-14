@@ -39,45 +39,56 @@ export const ThemeContextProvider = ({ children }) => {
             ? {
                 // Light mode colors
                 primary: {
-                  main: '#1976d2',
-                  light: '#42a5f5',
-                  dark: '#1565c0',
+                  main: '#1dbf73',
+                  light: '#43c784',
+                  dark: '#10945a',
                 },
                 secondary: {
-                  main: '#9c27b0',
-                  light: '#ba68c8',
-                  dark: '#7b1fa2',
+                  main: '#111827',
+                  light: '#374151',
+                  dark: '#0b0f19',
                 },
                 background: {
-                  default: '#f5f5f5',
+                  default: '#f8fafc',
                   paper: '#ffffff',
                 },
                 text: {
-                  primary: '#000000',
-                  secondary: '#666666',
+                  primary: '#0f172a',
+                  secondary: '#475569',
                 },
               }
             : {
                 // Dark mode colors
                 primary: {
-                  main: '#90caf9',
-                  light: '#e3f2fd',
-                  dark: '#42a5f5',
+                  main: '#1dbf73',
+                  light: '#52d18d',
+                  dark: '#0b8e53',
                 },
                 secondary: {
-                  main: '#ce93d8',
-                  light: '#f3e5f5',
-                  dark: '#ab47bc',
+                  main: '#e2e8f0',
+                  light: '#f8fafc',
+                  dark: '#94a3b8',
                 },
                 background: {
-                  default: '#121212',
-                  paper: '#1e1e1e',
+                  default: '#0b1120',
+                  paper: '#111827',
                 },
                 text: {
-                  primary: '#ffffff',
-                  secondary: '#b0b0b0',
+                  primary: '#f8fafc',
+                  secondary: '#cbd5f5',
                 },
               }),
+        },
+        typography: {
+          fontFamily: 'Inter, Nunito, sans-serif',
+          h1: { fontWeight: 700 },
+          h2: { fontWeight: 700 },
+          h3: { fontWeight: 700 },
+          h4: { fontWeight: 700 },
+          h5: { fontWeight: 700 },
+          h6: { fontWeight: 600 },
+          subtitle1: { fontWeight: 600 },
+          button: { textTransform: 'none', fontWeight: 600 },
         },
         components: {
           MuiCard: {

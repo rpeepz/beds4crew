@@ -94,3 +94,22 @@ export const removeFromStorage = (key) => {
     return false;
   }
 };
+
+// Listing metrics from real data only (no synthetic values)
+export const getListingMetrics = (property = {}) => {
+  const rating = typeof property.rating === "number" ? property.rating : null;
+  const reviews = typeof property.reviewCount === "number" ? property.reviewCount : null;
+  const responseHours = typeof property.ownerHost?.responseHours === "number" ? property.ownerHost.responseHours : null;
+  const completionRate = typeof property.ownerHost?.completionRate === "number" ? property.ownerHost.completionRate : null;
+  const sellerLevel = property.ownerHost?.sellerLevel || null;
+  const isVerified = property.ownerHost?.isVerified ?? null;
+
+  return {
+    rating,
+    reviews,
+    responseHours,
+    completionRate,
+    sellerLevel,
+    isVerified,
+  };
+};

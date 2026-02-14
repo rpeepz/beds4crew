@@ -1,5 +1,5 @@
 // filepath: /Users/cross/Desktop/property-rental-platform/client/src/components/RoomBedsConfigurator.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Button,
@@ -22,7 +22,14 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 
-export default function RoomBedsConfigurator({ rooms, onChange, propertyType = "accommodation", simplePrice = "", onSimplePriceChange }) {
+export default function RoomBedsConfigurator({
+  rooms,
+  onChange,
+  propertyType = "accommodation",
+  simplePrice = "",
+  onSimplePriceChange,
+  disableAutoReset = false,
+}) {
   const [bedOptions, setBedOptions] = useState([]);
   const [openRoomDialog, setOpenRoomDialog] = useState(false);
   const [openBedDialog, setOpenBedDialog] = useState(false);
@@ -47,12 +54,23 @@ export default function RoomBedsConfigurator({ rooms, onChange, propertyType = "
       .catch((err) => console.error("Failed to load beds.json:", err));
   }, []);
 
+  const hasInitialized = useRef(false);
+
   // Reset rooms and pricing mode when property type changes
   useEffect(() => {
+    if (disableAutoReset) {
+      return;
+    }
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      if (rooms?.length) {
+        return;
+      }
+    }
     onChange([]);
     setUseSimplePricing(false);
     setSimplePricePerNight("");
-  }, [propertyType]);
+  }, [propertyType, disableAutoReset]);
 
   // Sync external simplePrice prop with internal state
   useEffect(() => {

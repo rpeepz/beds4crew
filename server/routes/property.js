@@ -15,10 +15,21 @@ router.post("/", verifyToken, uploadMultiple, async (req, res) => {
     const { title, type, description, pricePerNight, address, maxGuests, facilities, category, city, country, rooms } = req.body;
     
     // Cloudinary returns the full URL in file.path
-    const images = req.files?.map(file => ({
-      path: file.path, // Cloudinary URL
-      caption: ""
-    })) || [];
+    const images = req.files?.map(file => {
+      const rawPath = file.path || "";
+      const normalizedPath = rawPath.startsWith("http")
+        ? rawPath
+        : rawPath.includes("public")
+          ? rawPath.replace(/^.*public/, "")
+          : file.filename
+            ? `/uploads/${file.filename}`
+            : rawPath;
+
+      return {
+        path: normalizedPath,
+        caption: ""
+      };
+    }) || [];
     
     // Parse rooms from JSON string
     let parsedRooms = [];
@@ -85,9 +96,11 @@ router.get("/", async (req, res) => {
     const properties = await Property.find({ isActive: true })
       .populate("ownerHost", "firstName lastName profileImagePath hasPaid")
       .lean();
-    
-    // Filter out properties from hosts who haven't paid
-    const paidHostProperties = properties.filter(p => p.ownerHost?.hasPaid === true);
+
+    const shouldFilterPaidHosts = process.env.NODE_ENV === "production";
+    const paidHostProperties = shouldFilterPaidHosts
+      ? properties.filter(p => p.ownerHost?.hasPaid === true)
+      : properties;
       
     cache.set(cacheKey, paidHostProperties, 300); // Cache for 5 minutes
     res.json(paidHostProperties);
@@ -198,13 +211,15 @@ router.put("/:id", verifyToken, async (req, res) => {
     }
 
     await property.save();
+
+    const populatedProperty = await property.populate("ownerHost", "firstName lastName profileImagePath hasPaid");
     
     // Clear relevant caches
     cache.delete("properties:all");
     cache.delete(`property:${req.params.id}`);
     cache.delete(`properties:user:${req.user.id}`);
     
-    res.json(property);
+    res.json(populatedProperty);
   } catch (error) {
     res.status(500).json({ message: "Failed to update property", error: error.message });
   }

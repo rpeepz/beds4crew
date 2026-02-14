@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Grid, TextField, MenuItem } from "@mui/material";
+import { Box, Typography, Grid, TextField, MenuItem, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import PropertyCard from "../components/PropertyCard";
 import { LoadingState, NoListings } from "../components/EmptyState";
 import { useSnackbar } from "../components/AppSnackbar";
@@ -7,6 +8,7 @@ import { fetchWithAuth, API_URL } from "../utils/api";
 import { commonStyles } from "../utils/styleConstants";
 
 export default function HostListingsPage() {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [sortedProperties, setSortedProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,12 +101,24 @@ export default function HostListingsPage() {
         <Grid container spacing={{ xs: 2, sm: 3 }}>
           {sortedProperties.map(prop => (
             <Grid item xs={12} sm={6} md={4} key={prop._id}>
-              <PropertyCard
-                property={prop}
-                showStatus={true}
-                showRoomCount={true}
-                showWishlist={false}
-              />
+              <Box>
+                <PropertyCard
+                  property={prop}
+                  showStatus={true}
+                  showRoomCount={true}
+                  showWishlist={false}
+                />
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    fullWidth
+                    onClick={() => navigate(`/property/${prop._id}`)}
+                  >
+                    View listing
+                  </Button>
+                </Box>
+              </Box>
             </Grid>
           ))}
         </Grid>

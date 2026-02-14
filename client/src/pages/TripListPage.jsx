@@ -7,11 +7,14 @@ import {
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { useNavigate } from "react-router-dom";
 import { LoadingState, NoTrips } from "../components/EmptyState";
-import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { fetchWithAuth, API_URL } from "../utils/api";
+import { formatImageUrl } from "../utils/helpers";
 import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
 
 export default function TripListPage() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [messageText, setMessageText] = useState("");
@@ -106,12 +109,21 @@ export default function TripListPage() {
                 <CardMedia
                   component="img"
                   height={CARD_IMAGE_HEIGHT.small}
-                  image={`${BASE_URL}${bk.property.images?.[0]?.path || bk.property.images?.[0]}`}
+                  image={formatImageUrl(bk.property.images?.[0]?.path || bk.property.images?.[0])}
                   alt={bk.property.title}
                   sx={{ objectFit: "cover" }}
                 />
                 <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1.25rem" },
+                      cursor: "pointer",
+                      "&:hover": { textDecoration: "underline" },
+                    }}
+                    onClick={() => navigate(`/property/${bk.property._id}`)}
+                  >
                     {bk.property.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -197,12 +209,21 @@ export default function TripListPage() {
                     <CardMedia
                       component="img"
                       height={CARD_IMAGE_HEIGHT.small}
-                      image={`${BASE_URL}${bk.property.images?.[0]?.path || bk.property.images?.[0]}`}
+                      image={formatImageUrl(bk.property.images?.[0]?.path || bk.property.images?.[0])}
                       alt={bk.property.title}
                       sx={{ objectFit: "cover", filter: "grayscale(30%)" }}
                     />
                     <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                      <Typography
+                        variant="h6"
+                        gutterBottom
+                        sx={{
+                          fontSize: { xs: "1rem", sm: "1.25rem" },
+                          cursor: "pointer",
+                          "&:hover": { textDecoration: "underline" },
+                        }}
+                        onClick={() => navigate(`/property/${bk.property._id}`)}
+                      >
                         {bk.property.title}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -262,7 +283,15 @@ export default function TripListPage() {
               />
             </DialogTitle>
             <DialogContent dividers>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+              <Typography
+                variant="subtitle1"
+                gutterBottom
+                sx={{ fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+                onClick={() => {
+                  setDialogOpen(false);
+                  navigate(`/property/${selectedBooking.property._id}`);
+                }}
+              >
                 {selectedBooking.property.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -2,11 +2,16 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Inter', 'Nunito', sans-serif;
 }
 
 body {
     transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: #f8fafc;
+}
+
+body[data-theme="dark"] {
+    background-color: #0b1120;
 }
 
 .leaflet-container {

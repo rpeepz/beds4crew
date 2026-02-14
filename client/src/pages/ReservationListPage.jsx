@@ -6,7 +6,8 @@ import {
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import { LoadingState, NoReservations } from "../components/EmptyState";
-import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { fetchWithAuth, API_URL } from "../utils/api";
+import { formatImageUrl } from "../utils/helpers";
 import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
 
 export default function ReservationListPage() {
@@ -132,7 +133,7 @@ export default function ReservationListPage() {
                   <CardMedia
                     component="img"
                     height={CARD_IMAGE_HEIGHT.small}
-                    image={`${BASE_URL}${bk.property?.images?.[0]?.path || bk.property?.images?.[0] || ''}`}
+                    image={formatImageUrl(bk.property?.images?.[0]?.path || bk.property?.images?.[0] || '')}
                     alt={bk.property?.title || 'Property'}
                     sx={{ objectFit: "cover" }}
                   />
@@ -215,7 +216,7 @@ export default function ReservationListPage() {
                   <CardMedia
                     component="img"
                     height={CARD_IMAGE_HEIGHT.small}
-                    image={`${BASE_URL}${bk.property?.images?.[0]?.path || bk.property?.images?.[0] || ''}`}
+                    image={formatImageUrl(bk.property?.images?.[0]?.path || bk.property?.images?.[0] || '')}
                     alt={bk.property?.title || 'Property'}
                     sx={{ objectFit: "cover" }}
                   />
@@ -279,7 +280,7 @@ export default function ReservationListPage() {
                   <CardMedia
                     component="img"
                     height={CARD_IMAGE_HEIGHT.small}
-                    image={`${BASE_URL}${bk.property?.images?.[0]?.path || bk.property?.images?.[0] || ''}`}
+                    image={formatImageUrl(bk.property?.images?.[0]?.path || bk.property?.images?.[0] || '')}
                     alt={bk.property?.title || 'Property'}
                     sx={{ objectFit: "cover" }}
                   />

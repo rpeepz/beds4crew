@@ -40,8 +40,8 @@ export const BUTTON_SPACING = {
 // Card heights
 export const CARD_IMAGE_HEIGHT = {
   small: 140,
-  medium: 160,
-  large: 200,
+  medium: 180,
+  large: 220,
 };
 
 // Border radius
@@ -103,10 +103,12 @@ export const commonStyles = {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    transition: "transform 0.2s, box-shadow 0.2s",
+    borderRadius: 3,
+    border: "1px solid rgba(148, 163, 184, 0.2)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
     "&:hover": {
-      transform: "translateY(-4px)",
-      boxShadow: 3,
+      transform: "translateY(-6px)",
+      boxShadow: "0 24px 60px rgba(15, 23, 42, 0.12)",
     },
   },
 

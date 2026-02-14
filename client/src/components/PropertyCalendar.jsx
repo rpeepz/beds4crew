@@ -203,10 +203,10 @@ export default function PropertyCalendar({
         </Box>
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={{ xs: 1.5, sm: 2 }}>
         {calendarData.map((month, idx) => (
           <Grid item xs={12} md={6} lg={4} key={idx}>
-            <Paper elevation={2} sx={{ p: 2 }}>
+            <Paper elevation={2} sx={{ p: { xs: 1.5, sm: 2 } }}>
               <Typography variant="subtitle1" align="center" gutterBottom fontWeight="bold">
                 {month.name}
               </Typography>
@@ -227,7 +227,7 @@ export default function PropertyCalendar({
               </Box>
 
               {/* Calendar days */}
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0.5 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: { xs: 0.35, sm: 0.5 } }}>
                 {month.days.map((day, dayIdx) => {
                   const hasPartialAvailability = day?.bedAvailability && 
                     day.bedAvailability.available > 0 && 
@@ -259,6 +259,7 @@ export default function PropertyCalendar({
                       <Box
                         sx={{
                           aspectRatio: "1",
+                          minHeight: { xs: 32, sm: 38 },
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
@@ -268,7 +269,7 @@ export default function PropertyCalendar({
                             ? day.isPast
                               ? "#e0e0e0"
                               : hasPartialAvailability
-                              ? "#ffeb3b" // Yellow for partial availability
+                              ? "#ffeb3b"
                               : day.isBlocked && isOwner
                               ? "#ff9800"
                               : day.isBooked || (day.isBlocked && !isOwner)
@@ -276,13 +277,14 @@ export default function PropertyCalendar({
                               : "#4caf50"
                             : "transparent",
                           color: day ? (day.isPast ? "#757575" : hasPartialAvailability ? "#000" : "white") : "transparent",
-                          fontSize: "0.875rem",
+                          fontSize: { xs: "0.7rem", sm: "0.8rem" },
                           fontWeight: day?.isFree ? "bold" : "normal",
                           cursor: day && !day.isPast ? "pointer" : "default",
                           position: "relative",
+                          transition: "transform 0.15s ease",
                           "&:hover": day && !day.isPast ? {
                             boxShadow: 2,
-                            transform: "scale(1.05)"
+                            transform: "scale(1.03)"
                           } : {}
                         }}
                       >
@@ -290,10 +292,10 @@ export default function PropertyCalendar({
                           {day?.day || ""}
                         </Typography>
                         {day?.bedAvailability && !day.isPast && property && (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              fontSize: "0.65rem", 
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: { xs: "0.55rem", sm: "0.65rem" },
                               lineHeight: 1,
                               fontWeight: "bold"
                             }}

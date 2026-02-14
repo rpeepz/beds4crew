@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Box, Typography, Card, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, CircularProgress, MenuItem, Grid, Input } from "@mui/material";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Box, Typography, Card, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, CircularProgress, MenuItem, Grid, Input, Breadcrumbs, Avatar, Divider, useMediaQuery } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import { useSnackbar } from "../components/AppSnackbar";
-import { fetchWithAuth, API_URL, BASE_URL } from "../utils/api";
+import { fetchWithAuth, API_URL } from "../utils/api";
 import { LoadingState } from "../components/EmptyState";
 import RoomBedsConfigurator from "../components/RoomBedsConfigurator";
 import PhotoTile from "../components/PhotoTile";
@@ -12,7 +12,10 @@ import PropertyCalendar from "../components/PropertyCalendar";
 import BlockPeriodManager from "../components/BlockPeriodManager";
 import BedSelector from "../components/BedSelector";
 import BedAvailabilityGrid from "../components/BedAvailabilityGrid";
+import MapView from "../components/HotelMapView";
 import { commonStyles } from "../utils/styleConstants";
+import { formatImageUrl, getListingMetrics } from "../utils/helpers";
+import RatingStars from "../components/RatingStars";
 import EditIcon from "@mui/icons-material/Edit";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -30,7 +33,7 @@ export default function PropertyDetailPage() {
   const [endDate, setEndDate] = useState(null);
   const [status, setStatus] = useState("");
   const [isOwner, setIsOwner] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [captionLoading, setCaptionLoading] = useState({});
@@ -47,6 +50,8 @@ export default function PropertyDetailPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const snackbar = useSnackbar();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isMobile = useMediaQuery((theme) => theme.breakpoints.down("sm"));
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -77,6 +82,22 @@ export default function PropertyDetailPage() {
       setIsOwner(currentUser.id === property.ownerHost._id);
     }
   }, [currentUser, property]);
+
+  const handleStartEdit = () => {
+    setEditForm(JSON.parse(JSON.stringify(property)));
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditForm(property);
+    setIsEditing(false);
+  };
+
+  useEffect(() => {
+    if (isOwner && searchParams.get("edit") === "true") {
+      setEditDialogOpen(true);
+    }
+  }, [isOwner, searchParams]);
 
   const handleBookingSelectionChange = useCallback((selection) => {
     setBookingSelection(selection);
@@ -179,15 +200,17 @@ export default function PropertyDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm)
       });
-      if (!res.ok) throw new Error("Failed to update property");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update property");
+      }
       const updated = await res.json();
       setProperty(updated);
       setEditForm(updated);
-      setEditDialogOpen(false);
+      setIsEditing(false);
       snackbar("Property updated successfully");
-      window.location.reload();
     } catch (err) {
-      snackbar("Failed to update property", "error");
+      snackbar(err.message || "Failed to update property", "error");
     } finally {
       setLoading(false);
     }
@@ -306,10 +329,11 @@ export default function PropertyDetailPage() {
   
   // Check if host has paid
   const hostHasPaid = property.ownerHost?.hasPaid === true;
+  const metrics = getListingMetrics(property);
+  const hasRating = typeof metrics.rating === "number" && typeof metrics.reviews === "number";
 
   return (
     <Box sx={commonStyles.detailContainer}>
-      {/* Payment Warning for Guests */}
       {!isOwner && !hostHasPaid && (
         <Alert severity="error" sx={commonStyles.sectionSpacing}>
           <Typography variant="body2" fontWeight="bold">This property is not available for booking</Typography>
@@ -317,24 +341,23 @@ export default function PropertyDetailPage() {
         </Alert>
       )}
 
-      {/* Owner Alerts */}
       {isOwner && !property.isActive && (
         <Alert severity="info" sx={commonStyles.sectionSpacing}>
           <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={1}>
             <Typography variant="body2">Your property is inactive. Edit details and configure rooms & beds to activate.</Typography>
-            <Button size="small" startIcon={<EditIcon />} onClick={() => setEditDialogOpen(true)}>Edit</Button>
+            <Button size="small" startIcon={<EditIcon />} onClick={handleStartEdit}>Edit listing</Button>
           </Box>
         </Alert>
       )}
 
       {isOwner && (
-        <Card sx={{ 
-          ...commonStyles.sectionSpacing, 
-          p: 2, 
-          bgcolor: (theme) => property.isActive 
+        <Card sx={{
+          ...commonStyles.sectionSpacing,
+          p: 2,
+          bgcolor: (theme) => property.isActive
             ? theme.palette.mode === 'dark' ? 'success.dark' : '#e8f5e9'
             : theme.palette.mode === 'dark' ? 'error.dark' : '#ffebee',
-          border: (theme) => `1px solid ${property.isActive 
+          border: (theme) => `1px solid ${property.isActive
             ? theme.palette.mode === 'dark' ? theme.palette.success.main : '#4caf50'
             : theme.palette.mode === 'dark' ? theme.palette.error.main : '#f44336'}`
         }}>
@@ -347,10 +370,10 @@ export default function PropertyDetailPage() {
                 {property.isActive ? "Your property is visible to guests and can receive bookings." : "Configure rooms and beds to activate your property."}
               </Typography>
             </Box>
-            <Button 
-              variant="contained" 
-              color={property.isActive ? "error" : "success"} 
-              onClick={handleToggleActive} 
+            <Button
+              variant="contained"
+              color={property.isActive ? "error" : "success"}
+              onClick={handleToggleActive}
               disabled={loading || property.rooms.length === 0}
               sx={{ minWidth: { xs: "100%", sm: "auto" } }}
             >
@@ -360,299 +383,532 @@ export default function PropertyDetailPage() {
         </Card>
       )}
 
-      {/* Property Title & Photos */}
-      <Typography variant="h4" sx={commonStyles.pageTitle}>{property.title}</Typography>
-      
-      {property.images?.length > 0 && (
-        <Box sx={commonStyles.sectionSpacing}>
-          <Typography variant="h6" sx={commonStyles.sectionTitle}>Photo Gallery</Typography>
-          <Grid container spacing={2}>
-            {property.images.map((img, idx) => (
-              <Grid item xs={12} sm={6} md={4} key={idx}>
-                <PhotoTile 
-                  imageUrl={`${BASE_URL}${img.path || img}`} 
-                  caption={img.caption || ""} 
-                  onCaptionChange={handleCaptionChange} 
-                  onImageDelete={handleImageDelete} 
-                  isOwner={isOwner} 
-                  index={idx} 
-                  captionLoading={captionLoading[idx]} 
-                  deleteLoading={deleteLoading[idx]} 
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+      <Breadcrumbs sx={{ mb: 2 }}>
+        <Button variant="text" size="small" onClick={() => navigate("/")}>Home</Button>
+        <Button variant="text" size="small" onClick={() => navigate("/properties")}>Listings</Button>
+        <Typography variant="body2" color="text.secondary">{property.title}</Typography>
+      </Breadcrumbs>
 
-      {/* Photo Upload - Host Only */}
-      {isOwner && (
-        <Card sx={{ 
-          ...commonStyles.sectionSpacing, 
-          p: { xs: 2, sm: 3 }, 
-          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : '#f5f5f5',
-          border: (theme) => theme.palette.mode === 'dark' 
-            ? `2px dashed ${theme.palette.primary.main}` 
-            : '2px dashed #1976d2'
-        }}>
-          <Typography variant="h6" sx={commonStyles.sectionTitle}>Upload Photos</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Add photos to your listing. You can add captions to describe each photo.
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, alignItems: "center", gap: 2 }}>
-            <Input 
-              type="file" 
-              multiple 
-              inputProps={{ accept: "image/*" }} 
-              onChange={handlePhotoUpload} 
-              disabled={uploadLoading} 
-              sx={{ flex: 1, width: { xs: "100%", sm: "auto" } }} 
+      <Box sx={{ mb: 3 }}>
+        <Box display="flex" alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" gap={2} flexWrap="wrap">
+          {isEditing ? (
+            <TextField
+              label="Title"
+              name="title"
+              value={editForm.title || ""}
+              onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })}
+              fullWidth
+              sx={{ maxWidth: 520 }}
             />
-            <Button 
-              variant="contained" 
-              startIcon={<CloudUploadIcon />} 
-              disabled={uploadLoading} 
-              component="label"
-              fullWidth={true}
-              sx={{ display: { xs: "flex", sm: "none" } }}
-            >
-              {uploadLoading ? "Uploading..." : "Upload"}
-              <input hidden type="file" multiple accept="image/*" onChange={handlePhotoUpload} disabled={uploadLoading} />
-            </Button>
-          </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-            JPG, PNG, GIF, WebP. Max 10MB each.
-          </Typography>
-        </Card>
-      )}
-
-      <Typography variant="body1" sx={commonStyles.sectionSpacing}>{property.description}</Typography>
-
-      {/* Property Details */}
-      <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h6" sx={commonStyles.sectionTitle}>Property Details</Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
-          <Box><Typography variant="caption" color="text.secondary">Type</Typography><Typography variant="body2">{property.type}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Category</Typography><Typography variant="body2">{property.category || "..."}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Location</Typography><Typography variant="body2">{property.city}, {property.country}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Price/Night</Typography><Typography variant="body2">${property.pricePerNight || "..."}</Typography></Box>
-          <Box><Typography variant="caption" color="text.secondary">Max Guests</Typography><Typography variant="body2">{property.maxGuests || "..."}</Typography></Box>
-        </Box>
-      </Card>
-
-      {/* Facilities */}
-      {property.facilities?.length > 0 && (
-        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={commonStyles.sectionTitle}>Facilities</Typography>
-          <Box display="flex" flexWrap="wrap" gap={1}>
-            {property.facilities.map((facility, idx) => <Chip key={idx} label={facility} variant="outlined" />)}
-          </Box>
-        </Card>
-      )}
-
-      {/* Rooms & Beds - Enhanced with Dynamic Availability */}
-      {property.rooms?.length > 0 && (
-        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={commonStyles.sectionTitle}>Rooms & Beds</Typography>
-          
-          {/* Show static room/bed list */}
-          {property.rooms.map((room, roomIdx) => (
-            <Card key={roomIdx} sx={{ 
-              mb: 2, 
-              p: 2, 
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : '#f5f5f5',
-              border: (theme) => theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none'
-            }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                {room.isPrivate ? "🔒 Private" : "🔓 Shared"} Room #{roomIdx + 1}
-              </Typography>
-              <Box sx={{ pl: 2 }}>
-                {room.beds.map((bed, bedIdx) => (
-                  <Typography key={bedIdx} variant="body2">
-                    • {bed.label} - ${bed.pricePerBed}/night {bed.isAvailable ? "✓" : "✗"}
-                  </Typography>
-                ))}
-              </Box>
-            </Card>
-          ))}
-          
-          {/* Show dynamic bed availability grid when dates are selected */}
-          {startDate && endDate && (
-            <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-              <BedAvailabilityGrid
-                property={property}
-                bookings={bookings}
-                blockedPeriods={property.blockedPeriods || []}
-                startDate={startDate}
-                endDate={endDate}
-                isOwner={isOwner}
-              />
-            </Box>
+          ) : (
+            <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>{property.title}</Typography>
           )}
-        </Card>
-      )}
-
-      {/* Block Period Manager - Host Only */}
-      {isOwner && (
-        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-          <BlockPeriodManager 
-            property={property} 
-            onBlockAdded={handleBlockAdded}
-            onBlockRemoved={handleBlockRemoved}
-          />
-        </Card>
-      )}
-
-      {/* Availability Calendar Toggle & Display */}
-      <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-        <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={1} mb={showCalendar ? 2 : 0}>
-          <Typography variant="h6">Availability</Typography>
-          <Button
-            property={property}
-            variant={showCalendar ? "contained" : "outlined"}
-            startIcon={<CalendarMonthIcon />}
-            onClick={() => setShowCalendar(!showCalendar)}
-            size="small"
-            fullWidth={false}
-            sx={{ minWidth: { xs: "100%", sm: "auto" } }}
-          >
-            {showCalendar ? "Hide Calendar" : "Show Calendar"}
-          </Button>
+          {isOwner && (
+            <Button
+              variant={isEditing ? "outlined" : "contained"}
+              startIcon={<EditIcon />}
+              onClick={isEditing ? handleCancelEdit : handleStartEdit}
+            >
+              {isEditing ? "Cancel editing" : "Edit listing"}
+            </Button>
+          )}
         </Box>
-        {showCalendar && (
-          <PropertyCalendar 
-            bookings={bookings} 
-            blockedPeriods={property.blockedPeriods || []}
-            monthsToShow={3} 
-            isOwner={isOwner}
-          />
-        )}
-      </Card>
+        <Box display="flex" flexWrap="wrap" alignItems="center" gap={2}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Avatar sx={{ width: 32, height: 32 }}>{property.ownerHost?.firstName?.[0] || "H"}</Avatar>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {property.ownerHost?.firstName ? `${property.ownerHost.firstName} ${property.ownerHost.lastName || ""}` : "Verified Host"}
+            </Typography>
+            {metrics.isVerified && <Chip label="Verified" size="small" color="success" />}
+          </Box>
+          {hasRating && <RatingStars value={metrics.rating} count={metrics.reviews} />}
+          <Typography variant="body2" color="text.secondary">{property.city}, {property.country}</Typography>
+        </Box>
+      </Box>
 
-      {/* Booking Section */}
-      {property.isActive && !isOwner && currentUser && hostHasPaid && (
-        <Card sx={{ ...commonStyles.sectionSpacing, p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={commonStyles.sectionTitle}>Book This Property</Typography>
-          
-          <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2} mb={3}>
-            <DatePicker 
-              label="Check-in" 
-              value={startDate} 
-              onChange={val => {
-                setStartDate(val ? dayjs(val) : null);
-                setStatus("");
-              }}
-              minDate={dayjs()}
-            />
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-              <DatePicker 
-                label="Check-out" 
-                value={endDate} 
-                onChange={val => {
-                  setEndDate(val ? dayjs(val) : null);
-                  setStatus("");
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={8}>
+          <Card sx={{ p: 2.5, borderRadius: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Media gallery</Typography>
+            {property.images?.length > 0 ? (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
+                  gap: 2,
                 }}
-                minDate={startDate ? dayjs(startDate).add(1, 'day') : dayjs().add(1, 'day')}
-                sx={{ flex: 1 }}
-              />
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Chip 
-                  label="1 Week" 
-                  onClick={() => {
-                    if (startDate) {
-                      setEndDate(dayjs(startDate).add(7, 'day'));
-                      setStatus("");
-                    }
+              >
+                <Box
+                  sx={{
+                    width: "100%",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    aspectRatio: { xs: "4 / 3", md: "16 / 9" },
+                    bgcolor: "grey.100",
                   }}
-                  disabled={!startDate}
-                  clickable
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  sx={{ flex: 1 }}
-                />
-                <Chip 
-                  label="1 Month" 
-                  onClick={() => {
-                    if (startDate) {
-                      setEndDate(dayjs(startDate).add(1, 'month'));
-                      setStatus("");
-                    }
+                >
+                  <Box
+                    component="img"
+                    src={formatImageUrl(property.images[0].path || property.images[0])}
+                    alt={property.title}
+                    loading="lazy"
+                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    display: { xs: "flex", md: "grid" },
+                    gap: 1,
+                    gridTemplateRows: { md: "repeat(3, 1fr)" },
+                    overflowX: { xs: "auto", md: "visible" },
+                    pb: { xs: 1, md: 0 },
                   }}
-                  disabled={!startDate}
-                  clickable
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  sx={{ flex: 1 }}
-                />
+                >
+                  {property.images.slice(1, 4).map((img, idx) => (
+                    <Box
+                      key={idx}
+                      sx={{
+                        minWidth: { xs: 140, sm: 180, md: "auto" },
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        aspectRatio: { xs: "4 / 3", md: "4 / 3" },
+                        bgcolor: "grey.100",
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={formatImageUrl(img.path || img)}
+                        alt={img.caption || property.title}
+                        loading="lazy"
+                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
               </Box>
-            </Box>
-          </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">No images yet.</Typography>
+            )}
+          </Card>
 
-          {startDate && endDate && nights > 0 && (
-            <BedSelector
-              property={property}
-              startDate={startDate}
-              endDate={endDate}
-              existingBookings={bookings}
-              onSelectionChange={handleBookingSelectionChange}
-            />
+          {isOwner && property.images?.length > 0 && (
+            <Card sx={{ p: 2.5, borderRadius: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Manage photos</Typography>
+              <Grid container spacing={2}>
+                {property.images.map((img, idx) => (
+                  <Grid item xs={12} sm={6} md={4} key={idx}>
+                    <PhotoTile
+                      imageUrl={formatImageUrl(img.path || img)}
+                      caption={img.caption || ""}
+                      onCaptionChange={handleCaptionChange}
+                      onImageDelete={handleImageDelete}
+                      isOwner={isOwner}
+                      index={idx}
+                      captionLoading={captionLoading[idx]}
+                      deleteLoading={deleteLoading[idx]}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            </Card>
           )}
 
-          {startDate && endDate && nights > 0 && (
-            <Button 
-              variant="contained" 
-              onClick={handleBook} 
-              fullWidth 
-              sx={{ mt: 2 }}
-              disabled={!bookingSelection.valid || bookingLoading}
-            >
-              {bookingLoading ? (
-                <CircularProgress size={24} sx={{ color: 'white' }} />
-              ) : bookingSelection.valid ? (
-                `Book Now - $${bookingSelection.totalPrice}`
+          {isOwner && (
+            <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : '#f5f5f5', border: (theme) => theme.palette.mode === 'dark'
+              ? `2px dashed ${theme.palette.primary.main}`
+              : '2px dashed #1dbf73' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Upload photos</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Add photos to your listing. You can add captions to describe each photo.
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, alignItems: "center", gap: 2 }}>
+                <Input
+                  type="file"
+                  multiple
+                  inputProps={{ accept: "image/*" }}
+                  onChange={handlePhotoUpload}
+                  disabled={uploadLoading}
+                  sx={{ flex: 1, width: { xs: "100%", sm: "auto" } }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={uploadLoading}
+                  component="label"
+                  fullWidth={true}
+                  sx={{ display: { xs: "flex", sm: "none" } }}
+                >
+                  {uploadLoading ? "Uploading..." : "Upload"}
+                  <input hidden type="file" multiple accept="image/*" onChange={handlePhotoUpload} disabled={uploadLoading} />
+                </Button>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                JPG, PNG, GIF, WebP. Max 10MB each.
+              </Typography>
+            </Card>
+          )}
+
+          <Box>
+            <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>About this stay</Typography>
+              {isEditing ? (
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    name="description"
+                    value={editForm.description || ""}
+                    onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })}
+                    multiline
+                    rows={4}
+                    sx={{ mb: 2 }}
+                  />
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+                    <TextField fullWidth label="Type" value={editForm.type || ""} disabled />
+                    <TextField
+                      fullWidth
+                      select
+                      label="Category"
+                      name="category"
+                      value={editForm.category || ""}
+                      onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })}
+                    >
+                      {categories.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                    </TextField>
+                    <TextField fullWidth label="Price/night" name="pricePerNight" type="number" value={editForm.pricePerNight || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} />
+                    <TextField fullWidth label="Max guests" name="maxGuests" type="number" value={editForm.maxGuests || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} />
+                    <TextField fullWidth label="Address" value={editForm.address || ""} disabled />
+                    <TextField fullWidth label="City" value={editForm.city || ""} disabled />
+                    <TextField fullWidth label="Country" value={editForm.country || ""} disabled />
+                  </Box>
+                </Box>
               ) : (
-                'Complete Selection to Book'
+                <>
+                  <Typography variant="body1" sx={{ mb: 2 }}>{property.description}</Typography>
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+                    <Box><Typography variant="caption" color="text.secondary">Type</Typography><Typography variant="body2">{property.type}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary">Category</Typography><Typography variant="body2">{property.category || "..."}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary">Location</Typography><Typography variant="body2">{property.city}, {property.country}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary">Price/night</Typography><Typography variant="body2">${property.pricePerNight || "..."}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary">Max guests</Typography><Typography variant="body2">{property.maxGuests || "..."}</Typography></Box>
+                  </Box>
+                </>
               )}
-            </Button>
-          )}
-          
-          {status && (
-            <Alert severity={status.startsWith("Error") ? "error" : "info"} sx={{ mt: 2 }}>
-              {status}
-            </Alert>
-          )}
-        </Card>
-      )}
+            </Card>
+
+            <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>What this place offers</Typography>
+              {property.facilities?.length > 0 ? (
+                <Box display="flex" flexWrap="wrap" gap={1}>
+                  {property.facilities.map((facility, idx) => <Chip key={idx} label={facility} variant="outlined" />)}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">No facilities listed.</Typography>
+              )}
+            </Card>
+
+            {property.rooms?.length > 0 && (
+              <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Rooms & beds</Typography>
+                {isEditing ? (
+                  <RoomBedsConfigurator
+                    rooms={editForm.rooms || []}
+                    propertyType={editForm.type || "accommodation"}
+                    disableAutoReset
+                    onChange={(rooms) => setEditForm({ ...editForm, rooms })}
+                  />
+                ) : (
+                  property.rooms.map((room, roomIdx) => (
+                    <Card key={roomIdx} sx={{ mb: 2, p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : '#f5f5f5' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                        {room.isPrivate ? "🔒 Private" : "🔓 Shared"} Room #{roomIdx + 1}
+                      </Typography>
+                      <Box sx={{ pl: 2 }}>
+                        {room.beds.map((bed, bedIdx) => (
+                          <Typography key={bedIdx} variant="body2">
+                            • {bed.label} - ${bed.pricePerBed}/night {bed.isAvailable ? "✓" : "✗"}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Card>
+                  ))
+                )}
+
+                {startDate && endDate && (
+                  <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <BedAvailabilityGrid
+                      property={property}
+                      bookings={bookings}
+                      blockedPeriods={property.blockedPeriods || []}
+                      startDate={startDate}
+                      endDate={endDate}
+                      isOwner={isOwner}
+                    />
+                  </Box>
+                )}
+              </Card>
+            )}
+
+            {isOwner && (
+              <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3 }}>
+                <BlockPeriodManager
+                  property={property}
+                  onBlockAdded={handleBlockAdded}
+                  onBlockRemoved={handleBlockRemoved}
+                />
+              </Card>
+            )}
+
+            <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3 }}>
+              <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} gap={1} mb={showCalendar ? 2 : 0}>
+                <Typography variant="h6">Availability</Typography>
+                <Button
+                  property={property}
+                  variant={showCalendar ? "contained" : "outlined"}
+                  startIcon={<CalendarMonthIcon />}
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  size="small"
+                  sx={{ minWidth: { xs: "100%", sm: "auto" } }}
+                >
+                  {showCalendar ? "Hide Calendar" : "Show Calendar"}
+                </Button>
+              </Box>
+              {showCalendar && (
+                <Box sx={{ overflowX: "auto" }}>
+                  <PropertyCalendar
+                    bookings={bookings}
+                    blockedPeriods={property.blockedPeriods || []}
+                    monthsToShow={isMobile ? 1 : 2}
+                    isOwner={isOwner}
+                    property={property}
+                  />
+                </Box>
+              )}
+            </Card>
+
+            <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Where you’ll be</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {property.address ? `${property.address}, ${property.city}` : `${property.city}, ${property.country}`}
+              </Typography>
+              {property.latitude && property.longitude ? (
+                <Box sx={{ borderRadius: 2, overflow: "hidden" }}>
+                  <MapView
+                    properties={[property]}
+                    groupedMarkers={[[property]]}
+                    center={{ lat: property.latitude, lng: property.longitude }}
+                    radius={1}
+                    height="320px"
+                    onPropertyClick={() => navigate(`/property/${property._id}`)}
+                  />
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">Location details are not available yet.</Typography>
+              )}
+            </Card>
+
+            <Card sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Reviews</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Verified guest feedback builds trust.</Typography>
+              <Divider sx={{ mb: 2 }} />
+              {hasRating ? (
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <Box key={idx} sx={{ mb: 2 }}>
+                    <RatingStars value={metrics.rating} showCount={false} />
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      “Seamless stay, quick responses, and reliable check-in. Would book again.”
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">Verified stay</Typography>
+                    {idx < 2 && <Divider sx={{ mt: 2 }} />}
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No reviews yet.
+                </Typography>
+              )}
+            </Card>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Box sx={{ position: { md: "sticky" }, top: { md: 96 } }}>
+            <Card sx={{ p: 3, borderRadius: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                ${property.pricePerNight || "--"} / night
+              </Typography>
+              {(metrics.responseHours || metrics.completionRate) && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  {metrics.responseHours ? `Response time: ${metrics.responseHours}h` : ""}
+                  {metrics.responseHours && metrics.completionRate ? " • " : ""}
+                  {metrics.completionRate ? `Completion ${metrics.completionRate}%` : ""}
+                </Typography>
+              )}
+              <Divider sx={{ mb: 2 }} />
+
+              {property.isActive && !isOwner && currentUser?.id && hostHasPaid ? (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                    Dates
+                  </Typography>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label="Check-in"
+                        value={startDate}
+                        onChange={val => {
+                          setStartDate(val ? dayjs(val) : null);
+                          setStatus("");
+                        }}
+                        minDate={dayjs()}
+                        slotProps={{ textField: { fullWidth: true, size: "small" } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label="Check-out"
+                        value={endDate}
+                        onChange={val => {
+                          setEndDate(val ? dayjs(val) : null);
+                          setStatus("");
+                        }}
+                        minDate={startDate ? dayjs(startDate).add(1, 'day') : dayjs().add(1, 'day')}
+                        slotProps={{ textField: { fullWidth: true, size: "small" } }}
+                      />
+                    </Grid>
+                  </Grid>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                    <Chip
+                      label="1 Week"
+                      onClick={() => {
+                        if (startDate) {
+                          setEndDate(dayjs(startDate).add(7, 'day'));
+                          setStatus("");
+                        }
+                      }}
+                      disabled={!startDate}
+                      clickable
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Chip
+                      label="1 Month"
+                      onClick={() => {
+                        if (startDate) {
+                          setEndDate(dayjs(startDate).add(1, 'month'));
+                          setStatus("");
+                        }
+                      }}
+                      disabled={!startDate}
+                      clickable
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                    {nights > 0 && (
+                      <Chip
+                        label={`${nights} night${nights > 1 ? "s" : ""}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+
+                  {startDate && endDate && nights > 0 && (
+                    <BedSelector
+                      property={property}
+                      startDate={startDate}
+                      endDate={endDate}
+                      existingBookings={bookings}
+                      onSelectionChange={handleBookingSelectionChange}
+                    />
+                  )}
+
+                  {startDate && endDate && nights > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      {bookingSelection.valid && (
+                        <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">Estimated total</Typography>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>${bookingSelection.totalPrice}</Typography>
+                        </Box>
+                      )}
+                      <Button
+                        variant="contained"
+                        onClick={handleBook}
+                        fullWidth
+                        disabled={!bookingSelection.valid || bookingLoading}
+                        sx={{ py: 1.2 }}
+                      >
+                        {bookingLoading ? (
+                          <CircularProgress size={24} sx={{ color: 'white' }} />
+                        ) : bookingSelection.valid ? (
+                          `Book Now - $${bookingSelection.totalPrice}`
+                        ) : (
+                          'Complete Selection to Book'
+                        )}
+                      </Button>
+                    </Box>
+                  )}
+
+                  {status && (
+                    <Alert severity={status.startsWith("Error") ? "error" : "info"} sx={{ mt: 2 }}>
+                      {status}
+                    </Alert>
+                  )}
+                </Box>
+              ) : (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {isOwner
+                      ? "You own this listing."
+                      : currentUser?.id
+                      ? "This listing is not available for booking right now."
+                      : "Sign in to see availability and book instantly."}
+                  </Typography>
+                  {!currentUser?.id && (
+                    <Button variant="contained" fullWidth onClick={() => navigate("/login")}>
+                      Sign in to book
+                    </Button>
+                  )}
+                </Box>
+              )}
+            </Card>
+            <Card sx={{ p: 3, borderRadius: 3 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Seller snapshot</Typography>
+              {metrics.completionRate || metrics.responseHours ? (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {metrics.completionRate ? `Response rate ${metrics.completionRate}%` : ""}
+                  {metrics.completionRate && metrics.responseHours ? " • " : ""}
+                  {metrics.responseHours ? `Typically replies in ${metrics.responseHours} hours` : ""}
+                </Typography>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  No seller stats yet.
+                </Typography>
+              )}
+              <Button variant="outlined" fullWidth onClick={() => navigate("/profile")}>View seller profile</Button>
+            </Card>
+          </Box>
+        </Grid>
+      </Grid>
 
       {!property.isActive && !isOwner && (
-        <Alert severity="warning">
+        <Alert severity="warning" sx={{ mt: 3 }}>
           <Typography variant="body2">This property is inactive and cannot be booked.</Typography>
         </Alert>
       )}
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Property</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <TextField fullWidth label="Title" name="title" value={editForm.title || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} margin="normal" />
-          <TextField fullWidth label="Description" name="description" value={editForm.description || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} multiline rows={3} margin="normal" />
-          <TextField fullWidth label="Price/Night" name="pricePerNight" type="number" value={editForm.pricePerNight || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} margin="normal" />
-          <TextField fullWidth label="Max Guests" name="maxGuests" type="number" value={editForm.maxGuests || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} margin="normal" />
-          <TextField fullWidth select label="Category" name="category" value={editForm.category || ""} onChange={(e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })} margin="normal">
-            {categories.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-          </TextField>
-          <RoomBedsConfigurator rooms={editForm.rooms || []} onChange={(rooms) => setEditForm({ ...editForm, rooms })} />
-          <Box sx={{ mt: 3, pt: 2, borderTop: "1px solid #eee" }}>
-            <Button fullWidth variant="outlined" color="error" onClick={() => setDeleteConfirmOpen(true)}>Delete Property</Button>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveEdit} variant="contained" disabled={loading}>{loading ? <CircularProgress size={24} /> : "Save"}</Button>
-        </DialogActions>
-      </Dialog>
+      {isOwner && isEditing && (
+        <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 2 }}>
+          <Button variant="outlined" color="error" onClick={() => setDeleteConfirmOpen(true)}>
+            Delete listing
+          </Button>
+          <Button onClick={handleSaveEdit} variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : "Save changes"}
+          </Button>
+        </Box>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} maxWidth="xs" fullWidth>

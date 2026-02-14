@@ -80,6 +80,7 @@ export default function MapView({
   center = { lat: 25.7617, lng: -80.1918 },
   radius = 30,
   onPropertyClick = () => {},
+  height = "500px",
 }) {
   const [expandedCluster, setExpandedCluster] = useState(null);
 
@@ -103,7 +104,7 @@ export default function MapView({
       minZoom={5}
       maxZoom={14}
       scrollWheelZoom={true}
-      style={{ width: '100%', height: '100%', minHeight: '500px', zIndex: 0 }}
+      style={{ width: '100%', height, minHeight: height, zIndex: 0 }}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -6,7 +6,7 @@ const emailService = require("../utils/emailService");
 const router = express.Router();
 
 // Get user's email preferences
-router.get("/email-preferences", verifyToken, async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("emailPreferences email firstName").lean();
     if (!user) {
@@ -19,7 +19,7 @@ router.get("/email-preferences", verifyToken, async (req, res) => {
 });
 
 // Update email preferences - requires email confirmation
-router.put("/email-preferences", verifyToken, async (req, res) => {
+router.put("/", verifyToken, async (req, res) => {
   try {
     const { preferences } = req.body;
     
