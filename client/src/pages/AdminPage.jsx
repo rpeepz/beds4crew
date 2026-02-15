@@ -57,6 +57,13 @@ export default function AdminPage() {
   const [selectedListing, setSelectedListing] = useState(null);
   const [listingFormData, setListingFormData] = useState({});
 
+  // Bookings state
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [editBookingOpen, setEditBookingOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [bookingStatus, setBookingStatus] = useState('');
+
   // Check authorization and fetch data
   useEffect(() => {
     const checkAuth = async () => {
@@ -68,6 +75,7 @@ export default function AdminPage() {
           setAuthorized(true);
           fetchUsers();
           fetchListings();
+          fetchBookings();
         } else {
           setAuthorized(false);
           snackbar('Unauthorized: Admin access denied', 'error');
@@ -112,6 +120,21 @@ export default function AdminPage() {
       snackbar('Failed to load listings', 'error');
     } finally {
       setListingsLoading(false);
+    }
+  };
+
+  const fetchBookings = async () => {
+    setBookingsLoading(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/auth/admin/bookings`);
+      if (!res.ok) throw new Error('Failed to fetch bookings');
+      const data = await res.json();
+      setBookings(data);
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+      snackbar('Failed to load bookings', 'error');
+    } finally {
+      setBookingsLoading(false);
     }
   };
 
@@ -206,6 +229,45 @@ export default function AdminPage() {
     }
   };
 
+  // Booking handlers
+  const handleEditBooking = (booking) => {
+    setSelectedBooking(booking);
+    setBookingStatus(booking.status || 'pending');
+    setEditBookingOpen(true);
+  };
+
+  const handleSaveBooking = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/auth/admin/bookings/${selectedBooking._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: bookingStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update booking');
+      snackbar('Booking updated successfully', 'success');
+      setEditBookingOpen(false);
+      fetchBookings();
+    } catch (err) {
+      console.error('Error saving booking:', err);
+      snackbar('Failed to save booking', 'error');
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to delete this booking?')) return;
+    try {
+      const res = await fetchWithAuth(`${API_URL}/auth/admin/bookings/${bookingId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete booking');
+      snackbar('Booking deleted successfully', 'success');
+      fetchBookings();
+    } catch (err) {
+      console.error('Error deleting booking:', err);
+      snackbar('Failed to delete booking', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -240,6 +302,7 @@ export default function AdminPage() {
         <Tabs value={tabValue} onChange={(_, val) => setTabValue(val)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tab label="Users" />
           <Tab label="Listings" />
+          <Tab label="Bookings" />
         </Tabs>
 
         {/* Users Tab */}
@@ -377,6 +440,83 @@ export default function AdminPage() {
             )}
           </Box>
         )}
+
+        {/* Bookings Tab */}
+        {tabValue === 2 && (
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">All Bookings ({bookings.length})</Typography>
+              <Button variant="outlined" onClick={fetchBookings} disabled={bookingsLoading}>
+                {bookingsLoading ? <CircularProgress size={24} /> : 'Refresh'}
+              </Button>
+            </Box>
+
+            {bookingsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : bookings.length > 0 ? (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'grey.100' }}>
+                      <TableCell><strong>Property</strong></TableCell>
+                      <TableCell><strong>Guest</strong></TableCell>
+                      <TableCell><strong>Host</strong></TableCell>
+                      <TableCell><strong>Dates</strong></TableCell>
+                      <TableCell><strong>Total</strong></TableCell>
+                      <TableCell><strong>Status</strong></TableCell>
+                      <TableCell><strong>Actions</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {bookings.map(booking => (
+                      <TableRow key={booking._id}>
+                        <TableCell>
+                          {booking.property?.title || 'Unknown'}
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            {booking.property?.city}, {booking.property?.country}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{booking.guest?.firstName} {booking.guest?.lastName}</TableCell>
+                        <TableCell>{booking.host?.firstName} {booking.host?.lastName}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>${booking.totalPrice}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={booking.status} 
+                            color={
+                              booking.status === 'confirmed' ? 'success' : 
+                              booking.status === 'pending' ? 'warning' : 
+                              booking.status === 'cancelled' || booking.status === 'rejected' ? 'error' : 'default'
+                            } 
+                            size="small" 
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton size="small" onClick={() => handleEditBooking(booking)} color="primary">
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteBooking(booking._id)} color="error">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                No bookings found
+              </Typography>
+            )}
+          </Box>
+        )}
       </Card>
 
       {/* User Edit Dialog */}
@@ -495,6 +635,58 @@ export default function AdminPage() {
         <DialogActions>
           <Button onClick={() => setEditListingOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveListing} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Booking Edit Dialog */}
+      <Dialog open={editBookingOpen} onClose={() => setEditBookingOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Booking</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          {selectedBooking && (
+            <>
+              <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Property</Typography>
+                <Typography variant="body2">{selectedBooking.property?.title}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedBooking.property?.city}, {selectedBooking.property?.country}
+                </Typography>
+              </Box>
+              <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Guest</Typography>
+                <Typography variant="body2">
+                  {selectedBooking.guest?.firstName} {selectedBooking.guest?.lastName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedBooking.guest?.email}
+                </Typography>
+              </Box>
+              <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Dates & Price</Typography>
+                <Typography variant="body2">
+                  {new Date(selectedBooking.startDate).toLocaleDateString()} - {new Date(selectedBooking.endDate).toLocaleDateString()}
+                </Typography>
+                <Typography variant="body2">
+                  Total: ${selectedBooking.totalPrice}
+                </Typography>
+              </Box>
+              <TextField
+                select
+                label="Status"
+                value={bookingStatus}
+                onChange={(e) => setBookingStatus(e.target.value)}
+                fullWidth
+              >
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="confirmed">Confirmed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+              </TextField>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditBookingOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveBooking} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
     </Box>

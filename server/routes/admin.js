@@ -1,6 +1,7 @@
 const express = require("express");
 const User = require("../models/User");
 const Property = require("../models/Property");
+const Booking = require("../models/Booking");
 const verifyToken = require("../middleware/auth");
 const router = express.Router();
 
@@ -107,6 +108,58 @@ router.delete("/properties/:propertyId", verifyToken, verifyAdmin, async (req, r
     res.json({ message: "Property deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete property", error: error.message });
+  }
+});
+
+// Get all bookings (admin view)
+router.get("/bookings", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const bookings = await Booking.find({})
+      .populate("guest", "firstName lastName email")
+      .populate("host", "firstName lastName email")
+      .populate("property", "title city country")
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
+  }
+});
+
+// Update booking status (admin)
+router.put("/bookings/:bookingId", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.bookingId,
+      { status },
+      { new: true }
+    )
+      .populate("guest", "firstName lastName email")
+      .populate("host", "firstName lastName email")
+      .populate("property", "title city country");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update booking", error: error.message });
+  }
+});
+
+// Delete booking (admin)
+router.delete("/bookings/:bookingId", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndDelete(req.params.bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.json({ message: "Booking deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete booking", error: error.message });
   }
 });
 
