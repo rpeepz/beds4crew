@@ -478,7 +478,7 @@ export default function BrowsePage() {
                   <CardMedia
                     component="img"
                     height="180"
-                    image={formatImageUrl(prop.images?.[0]?.path || prop.images?.[0]) || 'https://via.placeholder.com/300x180?text=No+Image'}
+                    image={formatImageUrl(prop.images?.[0]?.path || prop.images?.[0]) || 'https://picsum.photos/300/180?random=1'}
                     alt={prop.title}
                     sx={{ cursor: 'pointer' }}
                     onClick={() => {

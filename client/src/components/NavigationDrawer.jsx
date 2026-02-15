@@ -38,6 +38,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import MessageIcon from "@mui/icons-material/Message";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
@@ -98,6 +99,17 @@ export default function NavigationDrawer({ children }) {
   const fetchUnreadCount = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/bookings/unread/count`);
+      
+      // If unauthorized, silently skip (user might be logging out or token expired)
+      if (res.status === 401) {
+        setUnreadCount(0);
+        return;
+      }
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const data = await res.json();
       const newCount = data.unreadCount || 0;
 
@@ -109,7 +121,10 @@ export default function NavigationDrawer({ children }) {
       setPreviousUnreadCount(newCount);
       setUnreadCount(newCount);
     } catch (error) {
-      console.error("Failed to fetch unread count:", error);
+      // Log but don't show error to avoid spam in console
+      if (error.message !== 'HTTP 401') {
+        console.error("Failed to fetch unread count:", error);
+      }
     }
   };
 
@@ -185,6 +200,12 @@ export default function NavigationDrawer({ children }) {
           <ListItemIcon><SupportIcon /></ListItemIcon>
           <ListItemText primary="Support" />
         </ListItemButton>
+        {user.id === "698c112bbc6f9ffd822acf3c" && (
+          <ListItemButton onClick={() => (clickedIconLink("/admin"))}>
+            <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+            <ListItemText primary="Admin" />
+          </ListItemButton>
+        )}
       </List>
       <Divider sx={{ my: 1 }} />
       <Accordion disableGutters elevation={0} sx={{ px: 1 }}>
@@ -287,7 +308,7 @@ export default function NavigationDrawer({ children }) {
               sx={{ display: { xs: "none", sm: "inline-flex" } }}
               onClick={() => navigate(user.role === "host" ? "/add-property" : "/register")}
             >
-              Become a Seller
+              Become a Host
             </Button>
             <IconButton
               color="inherit"

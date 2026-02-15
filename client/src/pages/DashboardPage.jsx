@@ -182,7 +182,7 @@ export default function DashboardPage() {
           <Grid item xs={12} md={6}>
             <Card sx={{ p: 3, borderRadius: 3, boxShadow: 1 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                Become a trusted seller
+                Become a trusted host
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Showcase your listings, highlight your reliability, and grow bookings with confidence.

@@ -39,7 +39,7 @@ export default function PropertyCard({
           image={
             property.images?.[0]
               ? formatImageUrl(property.images[0].path || property.images[0])
-              : "https://via.placeholder.com/400x300?text=No+Image"
+              : "https://picsum.photos/400/300?random=1"
           }
           alt={property.title}
           sx={{ objectFit: "cover" }}

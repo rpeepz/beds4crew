@@ -12,6 +12,12 @@ const router = express.Router();
 // Create property (Host only)
 router.post("/", verifyToken, uploadMultiple, async (req, res) => {
   try {
+    // Verify user is a host
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'host') {
+      return res.status(403).json({ message: "Unauthorized: Only hosts can create properties" });
+    }
+
     const { title, type, description, pricePerNight, address, maxGuests, facilities, category, city, country, rooms } = req.body;
     
     // Cloudinary returns the full URL in file.path

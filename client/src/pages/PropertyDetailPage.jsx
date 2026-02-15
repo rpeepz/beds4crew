@@ -875,7 +875,7 @@ export default function PropertyDetailPage() {
               )}
             </Card>
             <Card sx={{ p: 3, borderRadius: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Seller snapshot</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Host snapshot</Typography>
               {metrics.completionRate || metrics.responseHours ? (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   {metrics.completionRate ? `Response rate ${metrics.completionRate}%` : ""}
@@ -884,10 +884,10 @@ export default function PropertyDetailPage() {
                 </Typography>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  No seller stats yet.
+                  No host stats yet.
                 </Typography>
               )}
-              <Button variant="outlined" fullWidth onClick={() => navigate("/profile")}>View seller profile</Button>
+              <Button variant="outlined" fullWidth onClick={() => navigate("/profile")}>View Host profile</Button>
             </Card>
           </Box>
         </Grid>

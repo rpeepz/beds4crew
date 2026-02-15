@@ -181,7 +181,7 @@ export default function SupportPage() {
     {
       title: "Community",
       topics: [
-        { title: "Seller Community", slug: "seller-community", description: "Tips, resources, and community updates for hosts." },
+        { title: "Host Community", slug: "host-community", description: "Tips, resources, and community updates for hosts." },
         { title: "Customer Stories", slug: "customer-stories", description: "Success stories from guests and hosts." },
         { title: "Affiliates", slug: "affiliates", description: "Affiliate program details and partner onboarding." },
         { title: "Events", slug: "events", description: "Upcoming webinars, meetups, and virtual events." },

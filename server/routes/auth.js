@@ -133,6 +133,7 @@ router.post("/login", async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         profileImagePath: user.profileImagePath,
+        hasPaid: user.hasPaid,
       },
     });
   } catch (error) {
@@ -211,21 +212,38 @@ router.post("/logout", async (req, res) => {
   }
 });
 
-// Update profile (name, avatar)
+// Update profile (name, phone, bio)
 router.put("/profile", verifyToken, async (req, res) => {
   try {
-    const { firstName, lastName } = req.body;
+    const { firstName, lastName, phone, bio } = req.body;
+    
+    // Validate input
+    if (firstName && firstName.trim().length < 2) {
+      return res.status(400).json({ message: "First name must be at least 2 characters" });
+    }
+    if (lastName && lastName.trim().length < 2) {
+      return res.status(400).json({ message: "Last name must be at least 2 characters" });
+    }
+    if (phone && !/^\d{10,}$/.test(phone.replace(/\D/g, ''))) {
+      return res.status(400).json({ message: "Phone must be at least 10 digits" });
+    }
+    if (bio && bio.length > 500) {
+      return res.status(400).json({ message: "Bio must be less than 500 characters" });
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: { 
-        firstName: sanitizeInput(firstName), 
-        lastName: sanitizeInput(lastName) 
+        firstName: firstName ? sanitizeInput(firstName) : undefined,
+        lastName: lastName ? sanitizeInput(lastName) : undefined,
+        phone: phone ? phone.trim() : undefined,
+        bio: bio ? sanitizeInput(bio) : undefined
       } },
       { new: true, select: "-password" }
     );
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: "Profile update failed" });
+    res.status(500).json({ message: "Profile update failed", error: error.message });
   }
 });
 
@@ -320,7 +338,8 @@ router.get("/me", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password").lean();
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+    // Ensure hasPaid is always included
+    res.json({ ...user, hasPaid: user.hasPaid || false });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch user profile" });
   }

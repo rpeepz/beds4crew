@@ -13,6 +13,10 @@ import {
   Card,
   CardContent,
   Divider,
+  Switch,
+  FormControlLabel,
+  FormGroup,
+  Alert,
 } from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -29,10 +33,21 @@ export default function ProfilePage() {
   const [form, setForm] = useState({
     firstName: storedUser.firstName || "",
     lastName: storedUser.lastName || "",
+    phone: storedUser.phone || "",
+    bio: storedUser.bio || "",
+  });
+  const [emailPreferences, setEmailPreferences] = useState({
+    bookingConfirmation: true,
+    bookingCancellation: true,
+    newBookingRequest: true,
+    newMessage: true,
+    welcomeEmail: true
   });
   const [profileImage, setProfileImage] = useState(storedUser.profileImagePath || "");
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
   const snackbar = useSnackbar();
 
   useEffect(() => {
@@ -46,29 +61,77 @@ export default function ProfilePage() {
         setListings(filtered);
       })
       .catch(() => {});
+
+    // Load email preferences
+    if (storedUser.id) {
+      fetchWithAuth(`${API_URL}/email-preferences`)
+        .then(res => res.json())
+        .then(prefs => {
+          if (prefs && typeof prefs === 'object') {
+            setEmailPreferences(prev => ({ ...prev, ...prefs }));
+          }
+        })
+        .catch(err => console.error('Failed to load email preferences:', err));
+    }
   }, [storedUser.id]);
 
   const profileMetrics = useMemo(() => getListingMetrics({}), []);
   const hasRating = typeof profileMetrics.rating === "number" && typeof profileMetrics.reviews === "number";
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const validateForm = () => {
+    const errors = {};
+    if (!form.firstName.trim()) errors.firstName = "First name is required";
+    if (!form.lastName.trim()) errors.lastName = "Last name is required";
+    if (form.firstName.trim().length < 2) errors.firstName = "First name must be at least 2 characters";
+    if (form.lastName.trim().length < 2) errors.lastName = "Last name must be at least 2 characters";
+    if (form.phone && !/^\d{10,}$/.test(form.phone.replace(/\D/g, ''))) {
+      errors.phone = "Phone must be at least 10 digits";
+    }
+    if (form.bio && form.bio.length > 500) errors.bio = "Bio must be less than 500 characters";
+    return errors;
+  };
+
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    // Clear error for this field
+    if (formErrors[name]) {
+      setFormErrors({ ...formErrors, [name]: "" });
+    }
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
-    const res = await fetchWithAuth(`${API_URL}/auth/profile`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form)
-    });
-    if (!res.ok) {
-      snackbar("Failed to update profile", "error");
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      snackbar("Please fix the errors before saving", "error");
       return;
     }
-    const data = await res.json();
-    localStorage.setItem("user", JSON.stringify(data));
-    snackbar("Profile updated successfully");
+
+    try {
+      const res = await fetchWithAuth(`${API_URL}/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          phone: form.phone.trim(),
+          bio: form.bio.trim(),
+        })
+      });
+      if (!res.ok) {
+        snackbar("Failed to update profile", "error");
+        return;
+      }
+      const data = await res.json();
+      localStorage.setItem("user", JSON.stringify(data));
+      snackbar("Profile updated successfully");
+    } catch (err) {
+      snackbar("Failed to update profile", "error");
+    }
   };
 
   const handlePhotoUpload = async (e) => {
@@ -140,6 +203,34 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEmailPreferenceChange = async (preference) => {
+    const newValue = !emailPreferences[preference];
+    
+    // Optimistic update
+    setEmailPreferences(prev => ({ ...prev, [preference]: newValue }));
+    
+    try {
+      setSavingPrefs(true);
+      const res = await fetchWithAuth(`${API_URL}/email-preferences`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: { [preference]: newValue } })
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to update preferences");
+      }
+      
+      snackbar("Email preference updated", "success");
+    } catch (error) {
+      // Revert on error
+      setEmailPreferences(prev => ({ ...prev, [preference]: !newValue }));
+      snackbar(error.message || "Failed to update preference", "error");
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
   return (
     <Box sx={commonStyles.contentContainer}>
       <Card sx={{ p: { xs: 3, md: 4 }, borderRadius: 3, mb: 3 }}>
@@ -157,7 +248,14 @@ export default function ProfilePage() {
               {form.firstName || "Your"} {form.lastName || "Profile"}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {profileMetrics.sellerLevel ? `Seller level: ${profileMetrics.sellerLevel}` : "Seller level: New"}
+              {storedUser.role === "host" ? (
+                <>
+                  {storedUser.hasPaid ? "✓ Verified Host" : "Host (Unverified)"}
+                  {profileMetrics.sellerLevel && ` • ${profileMetrics.sellerLevel}`}
+                </>
+              ) : (
+                "Guest Account"
+              )}
             </Typography>
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
               <Button variant="outlined" component="label" startIcon={<PhotoCameraIcon />} disabled={uploading || deleting} size="small">
@@ -200,11 +298,13 @@ export default function ProfilePage() {
             <Grid item xs={12}>
               <Card sx={{ p: 3, borderRadius: 3 }}>
                 <Typography variant="body2" color="text.secondary">
-                  No listings yet. Create your first listing to build trust and visibility.
+                  No listings yet. {storedUser.role === "host" ? "Create your first listing to build trust and visibility." : "You must be a host to create listings."}
                 </Typography>
-                <Button variant="contained" sx={{ mt: 2 }} href="/add-property">
-                  Add a listing
-                </Button>
+                {storedUser.role === "host" && (
+                  <Button variant="contained" sx={{ mt: 2 }} href="/add-property">
+                    Add a listing
+                  </Button>
+                )}
               </Card>
             </Grid>
           ) : (
@@ -244,19 +344,130 @@ export default function ProfilePage() {
       )}
 
       {tab === 2 && (
-        <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-            Account settings
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Keep your profile current to improve trust and booking conversion.
-          </Typography>
-          <form onSubmit={handleSubmit}>
-            <TextField label="First Name" name="firstName" fullWidth margin="normal" value={form.firstName} onChange={handleChange} />
-            <TextField label="Last Name" name="lastName" fullWidth margin="normal" value={form.lastName} onChange={handleChange} />
-            <Button type="submit" fullWidth variant="contained" sx={{ my: 2 }}>Save</Button>
-          </form>
-        </Card>
+        <Box sx={{ display: 'grid', gap: 3 }}>
+          {/* Personal Info */}
+          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Personal information
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Keep your profile current to improve trust and booking conversion.
+            </Typography>
+            <form onSubmit={handleSubmit}>
+              <TextField
+                label="First Name"
+                name="firstName"
+                fullWidth
+                margin="normal"
+                value={form.firstName}
+                onChange={handleChange}
+                error={!!formErrors.firstName}
+                helperText={formErrors.firstName}
+                required
+              />
+              <TextField
+                label="Last Name"
+                name="lastName"
+                fullWidth
+                margin="normal"
+                value={form.lastName}
+                onChange={handleChange}
+                error={!!formErrors.lastName}
+                helperText={formErrors.lastName}
+                required
+              />
+              <TextField
+                label="Phone Number"
+                name="phone"
+                fullWidth
+                margin="normal"
+                value={form.phone}
+                onChange={handleChange}
+                error={!!formErrors.phone}
+                helperText={formErrors.phone || "Optional: at least 10 digits"}
+                type="tel"
+              />
+              <TextField
+                label="Bio"
+                name="bio"
+                fullWidth
+                margin="normal"
+                value={form.bio}
+                onChange={handleChange}
+                error={!!formErrors.bio}
+                helperText={formErrors.bio || `${form.bio.length}/500 characters`}
+                multiline
+                rows={4}
+              />
+              <Button type="submit" fullWidth variant="contained" sx={{ my: 2 }}>
+                Save changes
+              </Button>
+            </form>
+          </Card>
+
+          {/* Email Preferences */}
+          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Email notifications
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Manage which email notifications you receive. Password-related emails cannot be disabled.
+            </Typography>
+            
+            <FormGroup>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={emailPreferences.bookingConfirmation}
+                    onChange={() => handleEmailPreferenceChange('bookingConfirmation')}
+                    disabled={savingPrefs}
+                  />
+                }
+                label="Booking Confirmations"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={emailPreferences.bookingCancellation}
+                    onChange={() => handleEmailPreferenceChange('bookingCancellation')}
+                    disabled={savingPrefs}
+                  />
+                }
+                label="Booking Cancellations"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={emailPreferences.newBookingRequest}
+                    onChange={() => handleEmailPreferenceChange('newBookingRequest')}
+                    disabled={savingPrefs}
+                  />
+                }
+                label="New Booking Requests (Hosts)"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={emailPreferences.newMessage}
+                    onChange={() => handleEmailPreferenceChange('newMessage')}
+                    disabled={savingPrefs}
+                  />
+                }
+                label="New Messages"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={emailPreferences.welcomeEmail}
+                    onChange={() => handleEmailPreferenceChange('welcomeEmail')}
+                    disabled={savingPrefs}
+                  />
+                }
+                label="Promotional & Updates"
+              />
+            </FormGroup>
+          </Card>
+        </Box>
       )}
     </Box>
   );

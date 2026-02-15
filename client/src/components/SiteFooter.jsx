@@ -13,7 +13,7 @@ const footerColumns = [
   },
   {
     title: "Community",
-    links: ["Seller Community", "Customer Stories", "Affiliates", "Events"],
+    links: ["Host Community", "Customer Stories", "Affiliates", "Events"],
   },
   {
     title: "Policies",
