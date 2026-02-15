@@ -49,9 +49,9 @@ export default function SupportPage() {
   };
 
   const handleSignUpForHosting = () => {
-    snackbar("Check email for instructions", "success");
+    snackbar("Please check account settings", "success");
     setTimeout(() => {
-      navigate("/");
+      navigate("/profile");
     }, 1500);
   };
 

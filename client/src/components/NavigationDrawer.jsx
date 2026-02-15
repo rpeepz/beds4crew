@@ -306,9 +306,9 @@ export default function NavigationDrawer({ children }) {
               variant="contained"
               color="primary"
               sx={{ display: { xs: "none", sm: "inline-flex" } }}
-              onClick={() => navigate(user.role === "host" ? "/add-property" : "/register")}
+              onClick={() => navigate("/properties")}
             >
-              Become a Host
+              Find a Bed
             </Button>
             <IconButton
               color="inherit"
@@ -346,7 +346,7 @@ export default function NavigationDrawer({ children }) {
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/")}>Home</Button>
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/properties")}>Explore</Button>
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/browse")}>Map</Button>
-            <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/support")}>Support</Button>
+            {/* <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/support")}>Support</Button> */}
             <Button
               variant="text"
               sx={{ fontWeight: 600 }}

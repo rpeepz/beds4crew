@@ -15,6 +15,7 @@ import { API_URL } from "../utils/api";
 import { commonStyles } from "../utils/styleConstants";
 import PropertyCard from "../components/PropertyCard";
 import GlobalSearchBar from "../components/GlobalSearchBar";
+import { useSnackbar } from "../components/AppSnackbar";
 
 const categoryTiles = [
   { label: "Apartments", value: "apartment" },
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const snackbar = useSnackbar();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
@@ -52,6 +54,13 @@ export default function DashboardPage() {
   const trending = useMemo(() => properties.slice(4, 12), [properties]);
   const recommended = useMemo(() => properties.slice(8, 16), [properties]);
 
+  const handleSignUpForHosting = () => {
+    snackbar("Please check account settings", "success");
+    setTimeout(() => {
+      navigate("/profile");
+    }, 1500);
+  };
+  
   const handleSearchSubmit = ({ query, category }) => {
     const params = new URLSearchParams();
     if (query) params.set("query", query);
@@ -187,7 +196,7 @@ export default function DashboardPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Showcase your listings, highlight your reliability, and grow bookings with confidence.
               </Typography>
-              <Button variant="contained" onClick={() => navigate("/add-property")}
+              <Button variant="contained" onClick={handleSignUpForHosting}
               >
                 Start hosting
               </Button>
