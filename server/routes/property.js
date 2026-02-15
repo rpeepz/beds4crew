@@ -102,14 +102,9 @@ router.get("/", async (req, res) => {
     const properties = await Property.find({ isActive: true })
       .populate("ownerHost", "firstName lastName profileImagePath hasPaid")
       .lean();
-
-    const shouldFilterPaidHosts = process.env.NODE_ENV === "production";
-    const paidHostProperties = shouldFilterPaidHosts
-      ? properties.filter(p => p.ownerHost?.hasPaid === true)
-      : properties;
       
-    cache.set(cacheKey, paidHostProperties, 300); // Cache for 5 minutes
-    res.json(paidHostProperties);
+    cache.set(cacheKey, properties, 300); // Cache for 5 minutes
+    res.json(properties);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch properties", error: error.message });
   }
