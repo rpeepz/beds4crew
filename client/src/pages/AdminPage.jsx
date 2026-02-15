@@ -264,31 +264,51 @@ export default function AdminPage() {
                       <TableCell><strong>Name</strong></TableCell>
                       <TableCell><strong>Email</strong></TableCell>
                       <TableCell><strong>Role</strong></TableCell>
-                      <TableCell><strong>Paid</strong></TableCell>
+                      <TableCell><strong>Subscription</strong></TableCell>
                       <TableCell><strong>Actions</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {users.map(user => (
-                      <TableRow key={user._id}>
-                        <TableCell>{user.firstName} {user.lastName}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Chip label={user.role} color={user.role === 'host' ? 'primary' : 'default'} size="small" />
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={user.hasPaid ? 'Yes' : 'No'} color={user.hasPaid ? 'success' : 'error'} size="small" />
-                        </TableCell>
-                        <TableCell>
-                          <IconButton size="small" onClick={() => handleEditUser(user)} color="primary">
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteUser(user._id)} color="error">
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {users.map(user => {
+                      const subStatus = user.subscriptionStatus || '';
+                      const isActive = ['active', 'trialing'].includes(subStatus);
+                      const hasStripe = Boolean(user.stripeCustomerId);
+                      
+                      let displayLabel = 'No subscription';
+                      let displayColor = 'default';
+                      
+                      if (isActive) {
+                        displayLabel = subStatus === 'trialing' ? 'Trial' : 'Active';
+                        displayColor = 'success';
+                      } else if (hasStripe && subStatus) {
+                        displayLabel = subStatus.replace('_', ' ');
+                        displayColor = 'warning';
+                      } else if (user.hasPaid) {
+                        displayLabel = 'Legacy paid';
+                        displayColor = 'info';
+                      }
+                      
+                      return (
+                        <TableRow key={user._id}>
+                          <TableCell>{user.firstName} {user.lastName}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <Chip label={user.role} color={user.role === 'host' ? 'primary' : 'default'} size="small" />
+                          </TableCell>
+                          <TableCell>
+                            <Chip label={displayLabel} color={displayColor} size="small" />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton size="small" onClick={() => handleEditUser(user)} color="primary">
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleDeleteUser(user._id)} color="error">
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -401,6 +421,22 @@ export default function AdminPage() {
             }
             label="Has Paid (Verified)"
           />
+          {selectedUser && (
+            <Box sx={{ mt: 1, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Subscription Details</Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Stripe Customer:</strong> {selectedUser.stripeCustomerId || 'None'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Status:</strong> {selectedUser.subscriptionStatus || 'No subscription'}
+              </Typography>
+              {selectedUser.subscriptionCurrentPeriodEnd && (
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Period End:</strong> {new Date(selectedUser.subscriptionCurrentPeriodEnd).toLocaleDateString()}
+                </Typography>
+              )}
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditUserOpen(false)}>Cancel</Button>

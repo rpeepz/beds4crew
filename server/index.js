@@ -9,6 +9,15 @@ const app = express();
 
 // Middleware
 app.use(compression()); // Compress all responses
+
+// Stripe webhook must receive raw body
+const billingRoutes = require("./routes/billing");
+app.post(
+  "/api/billing/webhook",
+  express.raw({ type: "application/json" }),
+  billingRoutes.handleWebhook
+);
+
 app.use(express.json({ limit: "10mb" })); // Add size limit
 
 // Configure CORS based on environment
@@ -52,6 +61,8 @@ app.use('/api/geocoding', geocodingRouter);
 
 const emailPreferencesRoutes = require("./routes/emailPreferences");
 app.use("/api/email-preferences", emailPreferencesRoutes);
+
+app.use("/api/billing", billingRoutes.router);
 
 const adminRoutes = require("./routes/admin");
 app.use("/api/auth/admin", adminRoutes);

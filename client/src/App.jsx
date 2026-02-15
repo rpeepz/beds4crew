@@ -52,6 +52,8 @@ function App() {
               hasPaid: data.hasPaid,
               phone: data.phone,
               bio: data.bio,
+              subscriptionStatus: data.subscriptionStatus,
+              subscriptionCurrentPeriodEnd: data.subscriptionCurrentPeriodEnd,
             }));
           }
         })

@@ -48,6 +48,12 @@ export default function ProfilePage() {
   const [deleting, setDeleting] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [subscriptionInfo, setSubscriptionInfo] = useState({
+    status: storedUser.subscriptionStatus || "",
+    currentPeriodEnd: storedUser.subscriptionCurrentPeriodEnd || null,
+    hasPaid: storedUser.hasPaid || false,
+  });
   const snackbar = useSnackbar();
 
   useEffect(() => {
@@ -74,6 +80,45 @@ export default function ProfilePage() {
         .catch(err => console.error('Failed to load email preferences:', err));
     }
   }, [storedUser.id]);
+
+  useEffect(() => {
+    if (!storedUser.id) return;
+
+    fetchWithAuth(`${API_URL}/auth/me`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        const updatedUser = {
+          ...storedUser,
+          ...data,
+          id: data._id || data.id || storedUser.id,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setSubscriptionInfo({
+          status: data.subscriptionStatus || "",
+          currentPeriodEnd: data.subscriptionCurrentPeriodEnd || null,
+          hasPaid: data.hasPaid || false,
+        });
+      })
+      .catch(err => console.error("Failed to refresh user subscription:", err));
+  }, [storedUser.id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    if (checkoutStatus === "success") {
+      snackbar("Subscription activated successfully", "success");
+    } else if (checkoutStatus === "cancel") {
+      snackbar("Subscription checkout canceled", "info");
+    }
+
+    if (checkoutStatus) {
+      params.delete("checkout");
+      const newSearch = params.toString();
+      const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [snackbar]);
 
   const profileMetrics = useMemo(() => getListingMetrics({}), []);
   const hasRating = typeof profileMetrics.rating === "number" && typeof profileMetrics.reviews === "number";
@@ -231,6 +276,63 @@ export default function ProfilePage() {
     }
   };
 
+  const handleStartSubscription = async () => {
+    try {
+      setBillingLoading(true);
+      const res = await fetchWithAuth(`${API_URL}/billing/create-checkout-session`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to start checkout");
+      }
+
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("Checkout URL missing");
+      }
+    } catch (error) {
+      snackbar(error.message || "Failed to start subscription", "error");
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      setBillingLoading(true);
+      const res = await fetchWithAuth(`${API_URL}/billing/create-portal-session`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to open billing portal");
+      }
+
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("Portal URL missing");
+      }
+    } catch (error) {
+      snackbar(error.message || "Failed to open billing portal", "error");
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const normalizedStatus = (subscriptionInfo.status || "").replace("_", " ");
+  const isSubscriptionActive = ["active", "trialing"].includes(subscriptionInfo.status);
+  const hasBilling = Boolean(subscriptionInfo.status) || subscriptionInfo.hasPaid;
+  const periodEndLabel = subscriptionInfo.currentPeriodEnd
+    ? new Date(subscriptionInfo.currentPeriodEnd).toLocaleDateString()
+    : null;
+
   return (
     <Box sx={commonStyles.contentContainer}>
       <Card sx={{ p: { xs: 3, md: 4 }, borderRadius: 3, mb: 3 }}>
@@ -250,7 +352,7 @@ export default function ProfilePage() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {storedUser.role === "host" ? (
                 <>
-                  {storedUser.hasPaid ? "✓ Verified Host" : "Host (Unverified)"}
+                  {subscriptionInfo.hasPaid ? "✓ Verified Host" : "Host (Unverified)"}
                   {profileMetrics.sellerLevel && ` • ${profileMetrics.sellerLevel}`}
                 </>
               ) : (
@@ -345,6 +447,43 @@ export default function ProfilePage() {
 
       {tab === 2 && (
         <Box sx={{ display: 'grid', gap: 3 }}>
+          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Subscription
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Manage your subscription to keep your account in good standing.
+            </Typography>
+            <Alert
+              severity={isSubscriptionActive ? "success" : "warning"}
+              sx={{ mb: 2 }}
+            >
+              {isSubscriptionActive
+                ? `Active${periodEndLabel ? ` • Renews on ${periodEndLabel}` : ""}`
+                : hasBilling
+                  ? `Status: ${normalizedStatus || "Inactive"}`
+                  : "No active subscription"}
+            </Alert>
+            <Box display="flex" gap={2} flexWrap="wrap">
+              {isSubscriptionActive ? (
+                <Button
+                  variant="contained"
+                  onClick={handleManageSubscription}
+                  disabled={billingLoading}
+                >
+                  {billingLoading ? "Opening portal..." : "Manage subscription"}
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={handleStartSubscription}
+                  disabled={billingLoading}
+                >
+                  {billingLoading ? "Redirecting..." : "Start subscription"}
+                </Button>
+              )}
+            </Box>
+          </Card>
           {/* Personal Info */}
           <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>

@@ -20,6 +20,12 @@ const UserSchema = new mongoose.Schema(
     
     role: { type: String, enum: ["guest", "host"], default: "guest" },
     hasPaid: { type: Boolean, default: false }, // Flag for hosts who have paid
+
+    // Stripe subscription details
+    stripeCustomerId: { type: String, default: "" },
+    stripeSubscriptionId: { type: String, default: "" },
+    subscriptionStatus: { type: String, default: "" },
+    subscriptionCurrentPeriodEnd: { type: Date, default: null },
     
     // Email notification preferences
     emailPreferences: {

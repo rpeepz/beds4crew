@@ -134,6 +134,8 @@ router.post("/login", async (req, res) => {
         lastName: user.lastName,
         profileImagePath: user.profileImagePath,
         hasPaid: user.hasPaid,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionCurrentPeriodEnd: user.subscriptionCurrentPeriodEnd,
       },
     });
   } catch (error) {
