@@ -42,6 +42,14 @@ router.post("/", verifyToken, uploadMultiple, async (req, res) => {
     if (rooms) {
       try {
         parsedRooms = JSON.parse(rooms);
+        // Ensure all beds have isAvailable set to true by default
+        parsedRooms.forEach(room => {
+          room.beds.forEach(bed => {
+            if (bed.isAvailable === undefined || bed.isAvailable === null) {
+              bed.isAvailable = true;
+            }
+          });
+        });
       } catch (e) {
         return res.status(400).json({ message: "Invalid rooms format" });
       }
@@ -201,7 +209,17 @@ router.put("/:id", verifyToken, async (req, res) => {
       ? facilities.split(",").map(f => sanitizeInput(f)) 
       : facilities.map(f => sanitizeInput(f));
     if (category) property.category = sanitizeInput(category);
-    if (rooms) property.rooms = rooms;
+    if (rooms) {
+      // Ensure all beds have isAvailable set to true by default
+      rooms.forEach(room => {
+        room.beds.forEach(bed => {
+          if (bed.isAvailable === undefined || bed.isAvailable === null) {
+            bed.isAvailable = true;
+          }
+        });
+      });
+      property.rooms = rooms;
+    }
     
     // Handle isActive - can only activate if rooms are configured
     if (isActive !== undefined) {

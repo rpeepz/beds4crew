@@ -5,6 +5,10 @@ import {
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import BedIcon from "@mui/icons-material/Bed";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 export default function BedSelector({ property, startDate, endDate, onSelectionChange, existingBookings = [] }) {
   const [selectedBeds, setSelectedBeds] = useState([]);
@@ -21,7 +25,7 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
 
   // Calculate nights
   const nights = startDate && endDate 
-    ? Math.floor((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24))
+    ? Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
     : 0;
 
   // Get all available beds (memoized to prevent infinite loops)
@@ -30,8 +34,19 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
     
     const beds = [];
     
+    // Filter bookings that overlap with selected dates
+    const overlappingBookings = existingBookings.filter(booking => {
+      const bookingStart = dayjs.utc(booking.startDate).startOf('day');
+      const bookingEnd = dayjs.utc(booking.endDate).startOf('day');
+      const selectedStart = dayjs(startDate).startOf('day');
+      const selectedEnd = dayjs(endDate).startOf('day');
+      
+      // Check if dates overlap: booking starts before selected ends AND booking ends after selected starts
+      return bookingStart.isBefore(selectedEnd) && bookingEnd.isAfter(selectedStart);
+    });
+    
     // Check if there's a whole-property booking for these dates
-    const hasWholePropertyBooking = existingBookings.some(booking => 
+    const hasWholePropertyBooking = overlappingBookings.some(booking => 
       (!booking.bookedBeds || booking.bookedBeds.length === 0)
     );
     
@@ -42,14 +57,14 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
     
     property.rooms.forEach((room, roomIndex) => {
       room.beds.forEach((bed, bedIndex) => {
-        // Check if bed is available and not booked
-        const isBooked = existingBookings.some(booking => 
+        // Check if bed is available and not booked during selected dates
+        const isBooked = overlappingBookings.some(booking => 
           booking.bookedBeds && booking.bookedBeds.some(b => 
             b.roomIndex === roomIndex && b.bedIndex === bedIndex
           )
         );
         
-        if (bed.isAvailable && !isBooked) {
+        if (bed.isAvailable !== false && !isBooked) {
           beds.push({
             roomIndex,
             bedIndex,
@@ -62,7 +77,7 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
       });
     });
     return beds;
-  }, [property, existingBookings]);
+  }, [property, existingBookings, startDate, endDate]);
 
   // Calculate total price
   useEffect(() => {

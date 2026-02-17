@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { TextField, Button, IconButton, InputAdornment, Box, MenuItem, Typography, Chip, CircularProgress, Alert } from "@mui/material";
+import { TextField, Button, IconButton, InputAdornment, Box, MenuItem, Typography, Chip, CircularProgress, Alert, Dialog, DialogContent, Backdrop } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
 import LocationPicker from "../components/LocationPicker";
@@ -57,6 +57,7 @@ export default function AddPropertyPage() {
   const [facilityInput, setFacilityInput] = useState("");
   const [imagePreviews, setImagePreviews] = useState([]);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const snackbar = useSnackbar();
 
@@ -170,6 +171,7 @@ export default function AddPropertyPage() {
     }
     
     setAddressError("");
+    setSubmitting(true);
     const data = new FormData();
     
     // Debug: Log what we're sending
@@ -214,6 +216,7 @@ export default function AddPropertyPage() {
       console.error("Error creating property:", err);
       snackbar("Failed to save property", "error");
       setError(err.message);
+      setSubmitting(false);
     }
   };
 
@@ -339,9 +342,32 @@ export default function AddPropertyPage() {
           onSimplePriceChange={handleSimplePriceChange}
         />
 
-        <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 3 }}>Add Property</Button>
+        <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 3 }} disabled={submitting}>Add Property</Button>
         {error && <Typography color="error" mt={2}>{error}</Typography>}
       </form>
+
+      {/* Submitting Dialog */}
+      <Dialog 
+        open={submitting} 
+        disableEscapeKeyDown
+        PaperProps={{
+          sx: { borderRadius: 3, p: 3, minWidth: 300 }
+        }}
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          sx: { backgroundColor: 'rgba(0, 0, 0, 0.7)' }
+        }}
+      >
+        <DialogContent sx={{ textAlign: 'center' }}>
+          <CircularProgress size={60} sx={{ mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            Creating Your Property
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Please wait while we save your listing...
+          </Typography>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

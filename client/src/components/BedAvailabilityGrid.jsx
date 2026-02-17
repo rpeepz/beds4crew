@@ -97,6 +97,7 @@ export default function BedAvailabilityGrid({
           });
         }
 
+        const bedIsEnabled = bed.isAvailable !== false;
         availability.push({
           roomIndex,
           bedIndex,
@@ -104,13 +105,13 @@ export default function BedAvailabilityGrid({
           isPrivate: room.isPrivate,
           bedLabel: bed.label,
           pricePerBed: bed.pricePerBed,
-          isAvailable: bed.isAvailable && !isBooked && !isBlocked,
+          isAvailable: bedIsEnabled && !isBooked && !isBlocked,
           isBooked,
           isBlocked,
           isBlockedByHost,
           blockReason,
           bookingIds,
-          bedDisabled: !bed.isAvailable
+          bedDisabled: !bedIsEnabled
         });
       });
     });
@@ -146,9 +147,9 @@ export default function BedAvailabilityGrid({
   const stats = useMemo(() => {
     const total = bedAvailability.length;
     const available = bedAvailability.filter(b => b.isAvailable).length;
-    const booked = bedAvailability.filter(b => b.isBooked).length;
-    const blocked = bedAvailability.filter(b => b.isBlocked).length;
-    const disabled = bedAvailability.filter(b => b.bedDisabled).length;
+    const booked = bedAvailability.filter(b => b.isBooked && !b.bedDisabled).length;
+    const blocked = bedAvailability.filter(b => b.isBlocked && !b.bedDisabled).length;
+    const disabled = bedAvailability.filter(b => b.bedDisabled && !b.isBooked && !b.isBlocked).length;
     
     return { total, available, booked, blocked, disabled };
   }, [bedAvailability]);

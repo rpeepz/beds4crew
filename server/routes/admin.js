@@ -163,4 +163,41 @@ router.delete("/bookings/:bookingId", verifyToken, verifyAdmin, async (req, res)
   }
 });
 
+// Fix all beds with missing or false isAvailable (migration endpoint)
+router.post("/fix-beds", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const properties = await Property.find({});
+    let updatedCount = 0;
+    let bedsFixed = 0;
+    
+    for (const property of properties) {
+      let needsUpdate = false;
+      
+      property.rooms.forEach(room => {
+        room.beds.forEach(bed => {
+          // Fix beds that are undefined, null, or explicitly false
+          if (bed.isAvailable !== true) {
+            bed.isAvailable = true;
+            needsUpdate = true;
+            bedsFixed++;
+          }
+        });
+      });
+      
+      if (needsUpdate) {
+        await property.save();
+        updatedCount++;
+      }
+    }
+    
+    res.json({ 
+      message: "Bed availability fixed", 
+      propertiesUpdated: updatedCount,
+      bedsFixed: bedsFixed
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fix beds", error: error.message });
+  }
+});
+
 module.exports = router;

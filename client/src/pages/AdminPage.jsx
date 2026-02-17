@@ -31,9 +31,8 @@ import { useNavigate } from 'react-router-dom';
 import { fetchWithAuth, API_URL } from '../utils/api';
 import { useSnackbar } from '../components/AppSnackbar';
 import { commonStyles } from '../utils/styleConstants';
-
-const ADMIN_ID = process.env.BEDS4CREW_ADMIN_ID;;
-const ADMIN_EMAIL = process.env.BEDS4CREW_ADMIN_EMAIL;
+const ADMIN_ID = '698c112bbc6f9ffd822acf3c';
+const ADMIN_EMAIL = 'r.papagna@gmail.com';
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -63,6 +62,7 @@ export default function AdminPage() {
   const [editBookingOpen, setEditBookingOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookingStatus, setBookingStatus] = useState('');
+  const [migrationLoading, setMigrationLoading] = useState(false);
 
   // Check authorization and fetch data
   useEffect(() => {
@@ -268,6 +268,25 @@ export default function AdminPage() {
     }
   };
 
+  const handleFixBeds = async () => {
+    if (!window.confirm('This will fix all beds with missing isAvailable property. Continue?')) return;
+    setMigrationLoading(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/auth/admin/fix-beds`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed to fix beds');
+      const data = await res.json();
+      snackbar(`Success! Updated ${data.propertiesUpdated} properties`, 'success');
+      fetchListings(); // Refresh listings
+    } catch (err) {
+      console.error('Error fixing beds:', err);
+      snackbar('Failed to fix beds', 'error');
+    } finally {
+      setMigrationLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -304,6 +323,25 @@ export default function AdminPage() {
           <Tab label="Listings" />
           <Tab label="Bookings" />
         </Tabs>
+
+        {/* Maintenance Actions */}
+        <Box sx={{ p: 2, bgcolor: 'warning.50', borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+            🔧 Maintenance Actions
+          </Typography>
+          <Button 
+            variant="outlined" 
+            color="warning"
+            onClick={handleFixBeds}
+            disabled={migrationLoading}
+            size="small"
+          >
+            {migrationLoading ? <CircularProgress size={20} /> : 'Fix All Bed Availability'}
+          </Button>
+          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+            Sets isAvailable=true for ALL beds (fixes false/null/undefined values)
+          </Typography>
+        </Box>
 
         {/* Users Tab */}
         {tabValue === 0 && (

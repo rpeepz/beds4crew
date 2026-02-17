@@ -86,7 +86,7 @@ function App() {
               <Routes>
                 <Route path="/register" element={<PublicRoute> <RegisterPage /> </PublicRoute>} />
                 <Route path="/login" element={<PublicRoute> <LoginPage /> </PublicRoute>} />
-                <Route path="/" element={<ProtectedRoute> <DashboardPage /> </ProtectedRoute>} />
+                <Route path="/" element={<DashboardPage />} />
                 <Route path="/add-property" element={<ProtectedRoute requiredRole="host"> <AddPropertyPage /> </ProtectedRoute>} />
                 <Route path="/properties" element={<PropertyFeedPage />} />
                 <Route path="/browse" element={<BrowsePage />} />

@@ -12,6 +12,10 @@ import { LoadingState, NoTrips } from "../components/EmptyState";
 import { fetchWithAuth, API_URL } from "../utils/api";
 import { formatImageUrl } from "../utils/helpers";
 import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 export default function TripListPage() {
   const navigate = useNavigate();
@@ -130,7 +134,7 @@ export default function TripListPage() {
                     {bk.property.address}
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 1 }}>
-                    {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
+                    {dayjs.utc(bk.startDate).format("M/D/YYYY")} – {dayjs.utc(bk.endDate).format("M/D/YYYY")}
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600 }}>
                     Total: ${bk.totalPrice}
@@ -230,7 +234,7 @@ export default function TripListPage() {
                         {bk.property.address}
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 1 }}>
-                        {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
+                        {dayjs.utc(bk.startDate).format("M/D/YYYY")} – {dayjs.utc(bk.endDate).format("M/D/YYYY")}
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600 }}>
                         Total: ${bk.totalPrice}
@@ -301,7 +305,7 @@ export default function TripListPage() {
                 Host: {selectedBooking.host?.firstName} {selectedBooking.host?.lastName}
               </Typography>
               <Typography variant="body2">
-                Dates: {new Date(selectedBooking.startDate).toLocaleDateString()} – {new Date(selectedBooking.endDate).toLocaleDateString()}
+                Dates: {dayjs.utc(selectedBooking.startDate).format("M/D/YYYY")} – {dayjs.utc(selectedBooking.endDate).format("M/D/YYYY")}
               </Typography>
               <Typography variant="body2">
                 Total: ${selectedBooking.totalPrice}

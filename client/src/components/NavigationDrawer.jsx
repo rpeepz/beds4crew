@@ -45,7 +45,6 @@ import { useSnackbar } from "../components/AppSnackbar";
 import { logout, fetchWithAuth, API_URL } from "../utils/api";
 import { useThemeMode } from "../contexts/ThemeContext";
 import GlobalSearchBar from "./GlobalSearchBar";
-import CategoryNav from "./CategoryNav";
 import SiteFooter from "./SiteFooter";
 
 const drawerWidth = 280;
@@ -174,7 +173,7 @@ export default function NavigationDrawer({ children }) {
 
   const drawer = (
     <Box sx={{ width: drawerWidth }}>
-      <Box sx={{ px: 2, py: 2 }}>
+      <Box sx={{ px: 2, py: 2, cursor: "pointer" }} onClick={() => setOpen(false)}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Beds4Crew
         </Typography>
@@ -200,7 +199,7 @@ export default function NavigationDrawer({ children }) {
           <ListItemIcon><SupportIcon /></ListItemIcon>
           <ListItemText primary="Support" />
         </ListItemButton>
-        {user.id === process.env.BEDS4CREW_ADMIN_ID && (
+        {user.id === "698c112bbc6f9ffd822acf3c" && (
           <ListItemButton onClick={() => (clickedIconLink("/admin"))}>
             <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
             <ListItemText primary="Admin" />
@@ -283,7 +282,7 @@ export default function NavigationDrawer({ children }) {
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar position="sticky" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Toolbar sx={{ gap: 2, minHeight: { xs: 64, md: 72 } }}>
-          <IconButton color="inherit" edge="start" onClick={() => setOpen(true)} sx={{ display: { md: "none" } }}>
+          <IconButton color="inherit" edge="start" onClick={() => setOpen(true)}>
             <Badge badgeContent={unreadCount} color="error">
               <MenuIcon />
             </Badge>
@@ -306,9 +305,15 @@ export default function NavigationDrawer({ children }) {
               variant="contained"
               color="primary"
               sx={{ display: { xs: "none", sm: "inline-flex" } }}
-              onClick={() => navigate("/properties")}
+              onClick={() => {
+                if (user.role === "host") {
+                  navigate("/add-property");
+                } else {
+                  navigate("/properties");
+                }
+              }}
             >
-              Find a Bed
+              {user.role === "host" ? "New Listing" : "Find a Bed"}
             </Button>
             <IconButton
               color="inherit"
@@ -347,37 +352,22 @@ export default function NavigationDrawer({ children }) {
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/properties")}>Explore</Button>
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/browse")}>Map</Button>
             {/* <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/support")}>Support</Button> */}
-            <Button
-              variant="text"
-              sx={{ fontWeight: 600 }}
-              onMouseEnter={openMegaMenu}
-              onClick={openMegaMenu}
-            >
-              Categories
-            </Button>
-            {isDesktop && (
-              <CategoryNav
-                categories={categories}
-                onSelect={(category) => navigate(`/properties?category=${category.value}`)}
-              />
-            )}
-            {!isDesktop && (
-              <Box sx={{ flex: 1, minWidth: 240 }}>
-                <GlobalSearchBar size="small" onSubmit={handleSearchSubmit} />
-              </Box>
-            )}
-          </Box>
-        </Box>
-      </AppBar>
-
-      <Popover
-        open={Boolean(megaAnchor)}
-        anchorEl={megaAnchor}
-        onClose={closeMegaMenu}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
-        PaperProps={{ sx: { p: 3, maxWidth: 600 } }}
-      >
+            <Box onMouseEnter={openMegaMenu} onMouseLeave={closeMegaMenu}>
+              <Button
+                variant="text"
+                sx={{ fontWeight: 600 }}
+                onClick={openMegaMenu}
+              >
+                Categories
+              </Button>
+              <Popover
+                open={Boolean(megaAnchor)}
+                anchorEl={megaAnchor}
+                onClose={closeMegaMenu}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                transformOrigin={{ vertical: "top", horizontal: "left" }}
+                PaperProps={{ sx: { p: 3, maxWidth: 600 }, onMouseLeave: closeMegaMenu }}
+              >
         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
           Explore categories
         </Typography>
@@ -399,6 +389,15 @@ export default function NavigationDrawer({ children }) {
           ))}
         </Grid>
       </Popover>
+            </Box>
+            {!isDesktop && (
+              <Box sx={{ flex: 1, minWidth: 240 }}>
+                <GlobalSearchBar size="small" onSubmit={handleSearchSubmit} />
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </AppBar>
 
       <Menu anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={closeAccountMenu}>
         {(isEmpty(user)

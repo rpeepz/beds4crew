@@ -47,11 +47,11 @@ router.post("/", verifyToken, async (req, res) => {
       }
     }
 
-    // Check if specific beds are already booked
+    // Check if specific beds are already booked (only confirmed, not pending)
     if (bookedBeds && bookedBeds.length > 0) {
       const overlapping = await Booking.findOne({
         property: propertyId,
-        status: { $in: ["pending", "confirmed"] },
+        status: "confirmed",
         startDate: { $lte: endDate },
         endDate: { $gte: startDate },
         bookedBeds: {
@@ -66,10 +66,10 @@ router.post("/", verifyToken, async (req, res) => {
         return res.status(409).json({ message: "One or more beds already booked for those dates" });
       }
     } else {
-      // Prevent double booking for entire property
+      // Prevent double booking for entire property (only confirmed, not pending)
       const overlapping = await Booking.findOne({
         property: propertyId,
-        status: { $in: ["pending", "confirmed"] },
+        status: "confirmed",
         $or: [
           { startDate: { $lte: endDate }, endDate: { $gte: startDate } }
         ]
@@ -195,22 +195,6 @@ router.put("/:id/confirm", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Can only confirm pending bookings" });
     }
     
-    // Update bed availability if specific beds were booked
-    if (booking.bookedBeds && booking.bookedBeds.length > 0) {
-      const property = await Property.findById(booking.property._id);
-      
-      booking.bookedBeds.forEach(bookedBed => {
-        if (property.rooms[bookedBed.roomIndex]) {
-          const bed = property.rooms[bookedBed.roomIndex].beds[bookedBed.bedIndex];
-          if (bed) {
-            bed.isAvailable = false;
-          }
-        }
-      });
-      
-      await property.save();
-    }
-    
     booking.status = "confirmed";
     await booking.save();
     
@@ -275,22 +259,6 @@ router.put("/:id/cancel", verifyToken, async (req, res) => {
     // Only guest who made the booking can cancel it
     if (booking.guest.toString() !== req.user.id) {
       return res.status(403).json({ message: "Unauthorized" });
-    }
-    
-    // If booking was confirmed, restore bed availability
-    if (booking.status === "confirmed" && booking.bookedBeds && booking.bookedBeds.length > 0) {
-      const property = await Property.findById(booking.property._id);
-      
-      booking.bookedBeds.forEach(bookedBed => {
-        if (property.rooms[bookedBed.roomIndex]) {
-          const bed = property.rooms[bookedBed.roomIndex].beds[bookedBed.bedIndex];
-          if (bed) {
-            bed.isAvailable = true;
-          }
-        }
-      });
-      
-      await property.save();
     }
     
     booking.status = "cancelled";

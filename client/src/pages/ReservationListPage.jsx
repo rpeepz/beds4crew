@@ -2,13 +2,19 @@ import React, { useEffect, useState } from "react";
 import { 
   Box, Typography, Card, CardContent, CardMedia, Grid, Chip, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, List,
-  ListItem, ListItemText, Divider, Alert, Avatar, ListItemAvatar, Badge
+  ListItem, ListItemText, Divider, Alert, Avatar, ListItemAvatar, Badge,
+  ButtonGroup
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
+import { useNavigate } from "react-router-dom";
 import { LoadingState, NoReservations } from "../components/EmptyState";
 import { fetchWithAuth, API_URL } from "../utils/api";
 import { formatImageUrl } from "../utils/helpers";
 import { commonStyles, CARD_IMAGE_HEIGHT } from "../utils/styleConstants";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 export default function ReservationListPage() {
   const [bookings, setBookings] = useState([]);
@@ -16,6 +22,8 @@ export default function ReservationListPage() {
   const [messageText, setMessageText] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("startDate");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   useEffect(() => {
     loadBookings();
@@ -102,6 +110,53 @@ export default function ReservationListPage() {
     }
   };
 
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const navigate = useNavigate();
+
+  const getSortedBookings = (bookingsToSort) => {
+    const sorted = [...bookingsToSort];
+    sorted.sort((a, b) => {
+      let compareA, compareB;
+
+      switch (sortBy) {
+        case "guest":
+          compareA = `${a.guest?.firstName || ""} ${a.guest?.lastName || ""}`.toLowerCase();
+          compareB = `${b.guest?.firstName || ""} ${b.guest?.lastName || ""}`.toLowerCase();
+          break;
+        case "property":
+          compareA = (a.property?.title || "").toLowerCase();
+          compareB = (b.property?.title || "").toLowerCase();
+          break;
+        case "startDate":
+          compareA = dayjs.utc(a.startDate).valueOf();
+          compareB = dayjs.utc(b.startDate).valueOf();
+          break;
+        case "length":
+          const lengthA = Math.ceil(dayjs.utc(a.endDate).diff(dayjs.utc(a.startDate), "day", true));
+          const lengthB = Math.ceil(dayjs.utc(b.endDate).diff(dayjs.utc(b.startDate), "day", true));
+          compareA = lengthA;
+          compareB = lengthB;
+          break;
+        default:
+          return 0;
+      }
+
+      if (compareA < compareB) return sortDirection === "asc" ? -1 : 1;
+      if (compareA > compareB) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  };
+
   if (loading) {
     return <LoadingState message="Loading reservations..." />;
   }
@@ -110,6 +165,10 @@ export default function ReservationListPage() {
   const confirmedBookings = bookings.filter(b => b.status === "confirmed" && b.property);
   const otherBookings = bookings.filter(b => b.status !== "pending" && b.status !== "confirmed" && b.property);
 
+  const sortedPendingBookings = getSortedBookings(pendingBookings);
+  const sortedConfirmedBookings = getSortedBookings(confirmedBookings);
+  const sortedOtherBookings = getSortedBookings(otherBookings);
+
   return (
     <Box sx={commonStyles.contentContainer}>
       <Typography variant="h4" sx={commonStyles.pageTitle}>
@@ -117,6 +176,38 @@ export default function ReservationListPage() {
       </Typography>
 
       {bookings.length === 0 && <NoReservations />}
+
+      {bookings.length > 0 && (
+        <Box sx={{ mb: 3, display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+          <Typography variant="body2" color="text.secondary">Sort by:</Typography>
+          <ButtonGroup size="small" variant="outlined">
+            <Button 
+              onClick={() => handleSort("guest")}
+              variant={sortBy === "guest" ? "contained" : "outlined"}
+            >
+              Guest {sortBy === "guest" && (sortDirection === "asc" ? "↑" : "↓")}
+            </Button>
+            <Button 
+              onClick={() => handleSort("property")}
+              variant={sortBy === "property" ? "contained" : "outlined"}
+            >
+              Property {sortBy === "property" && (sortDirection === "asc" ? "↑" : "↓")}
+            </Button>
+            <Button 
+              onClick={() => handleSort("startDate")}
+              variant={sortBy === "startDate" ? "contained" : "outlined"}
+            >
+              Start Date {sortBy === "startDate" && (sortDirection === "asc" ? "↑" : "↓")}
+            </Button>
+            <Button 
+              onClick={() => handleSort("length")}
+              variant={sortBy === "length" ? "contained" : "outlined"}
+            >
+              Length {sortBy === "length" && (sortDirection === "asc" ? "↑" : "↓")}
+            </Button>
+          </ButtonGroup>
+        </Box>
+      )}
 
       {pendingBookings.length > 0 && (
         <>
@@ -127,7 +218,7 @@ export default function ReservationListPage() {
             Pending Requests
           </Typography>
           <Grid container spacing={{ xs: 2, sm: 3 }} sx={commonStyles.sectionSpacing}>
-            {pendingBookings.map(bk => (
+            {sortedPendingBookings.map(bk => (
               <Grid item xs={12} sm={6} md={4} key={bk._id}>
                 <Card sx={{ ...commonStyles.card, border: 2, borderColor: "warning.main" }}>
                   <CardMedia
@@ -138,14 +229,29 @@ export default function ReservationListPage() {
                     sx={{ objectFit: "cover" }}
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                    <Typography
+                      variant="h6" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: {
+                          xs: "1rem",
+                          sm: "1.25rem"
+                        },
+                        cursor: "pointer",
+                        "&:hover": {
+                          textDecoration: "underline"
+                        } 
+                      }}
+                      onClick={ () => navigate(`/property/${bk.property._id}`)
+                      }
+                    >
                       {bk.property?.title || 'Property'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Guest: {bk.guest?.firstName} {bk.guest?.lastName}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
-                      {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
+                      {dayjs.utc(bk.startDate).format("M/D/YYYY")} – {dayjs.utc(bk.endDate).format("M/D/YYYY")}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       Total: ${bk.totalPrice}
@@ -210,7 +316,7 @@ export default function ReservationListPage() {
             Confirmed Reservations
           </Typography>
           <Grid container spacing={{ xs: 2, sm: 3 }} sx={commonStyles.sectionSpacing}>
-            {confirmedBookings.map(bk => (
+            {sortedConfirmedBookings.map(bk => (
               <Grid item xs={12} sm={6} md={4} key={bk._id}>
                 <Card sx={commonStyles.card}>
                   <CardMedia
@@ -228,7 +334,7 @@ export default function ReservationListPage() {
                       Guest: {bk.guest?.firstName} {bk.guest?.lastName}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
-                      {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
+                      {dayjs.utc(bk.startDate).format("M/D/YYYY")} – {dayjs.utc(bk.endDate).format("M/D/YYYY")}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       Total: ${bk.totalPrice}
@@ -274,7 +380,7 @@ export default function ReservationListPage() {
             Past/Cancelled Reservations
           </Typography>
           <Grid container spacing={{ xs: 2, sm: 3 }}>
-            {otherBookings.map(bk => (
+            {sortedOtherBookings.map(bk => (
               <Grid item xs={12} sm={6} md={4} key={bk._id}>
                 <Card sx={{ ...commonStyles.card, opacity: 0.7 }}>
                   <CardMedia
@@ -292,7 +398,7 @@ export default function ReservationListPage() {
                       Guest: {bk.guest?.firstName} {bk.guest?.lastName}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
-                      {new Date(bk.startDate).toLocaleDateString()} – {new Date(bk.endDate).toLocaleDateString()}
+                      {dayjs.utc(bk.startDate).format("M/D/YYYY")} – {dayjs.utc(bk.endDate).format("M/D/YYYY")}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       Total: ${bk.totalPrice}
@@ -324,7 +430,13 @@ export default function ReservationListPage() {
               />
             </DialogTitle>
             <DialogContent dividers>
-              <Typography variant="subtitle1" gutterBottom>
+              <Typography variant="subtitle1" gutterBottom sx={{
+                      fontSize: { xs: "1rem", sm: "1.25rem" },
+                      cursor: "pointer",
+                      "&:hover": { textDecoration: "underline" },
+                    }}
+                    onClick={() => navigate(`/property/${selectedBooking.property._id}`)}
+                  >
                 <strong>{selectedBooking.property.title}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -337,7 +449,7 @@ export default function ReservationListPage() {
                 Email: {selectedBooking.guest?.email}
               </Typography>
               <Typography variant="body2">
-                Dates: {new Date(selectedBooking.startDate).toLocaleDateString()} – {new Date(selectedBooking.endDate).toLocaleDateString()}
+                Dates: {dayjs.utc(selectedBooking.startDate).format("M/D/YYYY")} – {dayjs.utc(selectedBooking.endDate).format("M/D/YYYY")}
               </Typography>
               <Typography variant="body2">
                 Total: ${selectedBooking.totalPrice}
