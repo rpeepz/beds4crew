@@ -32,8 +32,8 @@ import { fetchWithAuth, API_URL } from '../utils/api';
 import { useSnackbar } from '../components/AppSnackbar';
 import { commonStyles } from '../utils/styleConstants';
 
-const ADMIN_ID = '698c112bbc6f9ffd822acf3c';
-const ADMIN_EMAIL = 'r.papagna@gmail.com';
+const ADMIN_ID = process.env.BEDS4CREW_ADMIN_ID;;
+const ADMIN_EMAIL = process.env.BEDS4CREW_ADMIN_EMAIL;
 
 export default function AdminPage() {
   const navigate = useNavigate();

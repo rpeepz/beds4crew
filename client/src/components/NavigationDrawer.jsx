@@ -200,7 +200,7 @@ export default function NavigationDrawer({ children }) {
           <ListItemIcon><SupportIcon /></ListItemIcon>
           <ListItemText primary="Support" />
         </ListItemButton>
-        {user.id === "698c112bbc6f9ffd822acf3c" && (
+        {user.id === process.env.BEDS4CREW_ADMIN_ID && (
           <ListItemButton onClick={() => (clickedIconLink("/admin"))}>
             <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
             <ListItemText primary="Admin" />
