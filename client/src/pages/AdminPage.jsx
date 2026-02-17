@@ -31,6 +31,10 @@ import { useNavigate } from 'react-router-dom';
 import { fetchWithAuth, API_URL } from '../utils/api';
 import { useSnackbar } from '../components/AppSnackbar';
 import { commonStyles } from '../utils/styleConstants';
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 const ADMIN_ID = '698c112bbc6f9ffd822acf3c';
 const ADMIN_EMAIL = 'r.papagna@gmail.com';
 
@@ -520,7 +524,7 @@ export default function AdminPage() {
                         <TableCell>{booking.host?.firstName} {booking.host?.lastName}</TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                            {dayjs.utc(booking.startDate).format("M/D/YYYY")} – {dayjs.utc(booking.endDate).format("M/D/YYYY")}
                           </Typography>
                         </TableCell>
                         <TableCell>${booking.totalPrice}</TableCell>

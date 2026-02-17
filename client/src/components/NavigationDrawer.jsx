@@ -71,7 +71,6 @@ export default function NavigationDrawer({ children }) {
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const [pollInterval, setPollInterval] = useState(5000);
   const [accountAnchor, setAccountAnchor] = useState(null);
-  const [megaAnchor, setMegaAnchor] = useState(null);
   const navigate = useNavigate();
   const snackbar = useSnackbar();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -161,14 +160,6 @@ export default function NavigationDrawer({ children }) {
 
   const closeAccountMenu = () => {
     setAccountAnchor(null);
-  };
-
-  const openMegaMenu = (event) => {
-    setMegaAnchor(event.currentTarget);
-  };
-
-  const closeMegaMenu = () => {
-    setMegaAnchor(null);
   };
 
   const drawer = (
@@ -352,44 +343,6 @@ export default function NavigationDrawer({ children }) {
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/properties")}>Explore</Button>
             <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/browse")}>Map</Button>
             {/* <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/support")}>Support</Button> */}
-            <Box onMouseEnter={openMegaMenu} onMouseLeave={closeMegaMenu}>
-              <Button
-                variant="text"
-                sx={{ fontWeight: 600 }}
-                onClick={openMegaMenu}
-              >
-                Categories
-              </Button>
-              <Popover
-                open={Boolean(megaAnchor)}
-                anchorEl={megaAnchor}
-                onClose={closeMegaMenu}
-                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                transformOrigin={{ vertical: "top", horizontal: "left" }}
-                PaperProps={{ sx: { p: 3, maxWidth: 600 }, onMouseLeave: closeMegaMenu }}
-              >
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-          Explore categories
-        </Typography>
-        <Grid container spacing={2}>
-          {categories.map((category) => (
-            <Grid item xs={6} key={category.value}>
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ justifyContent: "flex-start", textTransform: "none" }}
-                onClick={() => {
-                  closeMegaMenu();
-                  navigate(`/properties?category=${category.value}`);
-                }}
-              >
-                {category.label}
-              </Button>
-            </Grid>
-          ))}
-        </Grid>
-      </Popover>
-            </Box>
             {!isDesktop && (
               <Box sx={{ flex: 1, minWidth: 240 }}>
                 <GlobalSearchBar size="small" onSubmit={handleSearchSubmit} />

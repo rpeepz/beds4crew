@@ -195,6 +195,47 @@ router.put("/:id/confirm", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Can only confirm pending bookings" });
     }
     
+    // Check for conflicts with other confirmed bookings before confirming
+    if (booking.bookedBeds && booking.bookedBeds.length > 0) {
+      // Check if specific beds are already booked
+      const conflictingBooking = await Booking.findOne({
+        _id: { $ne: booking._id }, // Exclude current booking
+        property: booking.property._id,
+        status: "confirmed",
+        startDate: { $lte: booking.endDate },
+        endDate: { $gte: booking.startDate },
+        bookedBeds: {
+          $elemMatch: {
+            $or: booking.bookedBeds.map(bed => ({
+              roomIndex: bed.roomIndex,
+              bedIndex: bed.bedIndex
+            }))
+          }
+        }
+      }).lean();
+      
+      if (conflictingBooking) {
+        return res.status(409).json({ 
+          message: "Cannot confirm: One or more beds are already booked for overlapping dates" 
+        });
+      }
+    } else {
+      // Check for conflicts when booking entire property
+      const conflictingBooking = await Booking.findOne({
+        _id: { $ne: booking._id }, // Exclude current booking
+        property: booking.property._id,
+        status: "confirmed",
+        startDate: { $lte: booking.endDate },
+        endDate: { $gte: booking.startDate }
+      }).lean();
+      
+      if (conflictingBooking) {
+        return res.status(409).json({ 
+          message: "Cannot confirm: Property is already booked for overlapping dates" 
+        });
+      }
+    }
+    
     booking.status = "confirmed";
     await booking.save();
     

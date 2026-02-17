@@ -66,6 +66,13 @@ export default function ReservationListPage() {
         const updated = await fetchWithAuth(`${API_URL}/bookings/${bookingId}`);
         setSelectedBooking(await updated.json());
       }
+    } else if (res.status === 409) {
+      const error = await res.json();
+      alert(error.message || "Cannot confirm: This booking conflicts with another reservation.");
+      loadBookings(); // Refresh to show current state
+    } else {
+      const error = await res.json();
+      alert(error.message || "Failed to confirm booking");
     }
   };
 
