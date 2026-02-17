@@ -84,6 +84,71 @@ export default function MapView({
 }) {
   const [expandedCluster, setExpandedCluster] = useState(null);
 
+  // Force Leaflet to always use light theme - prevent dark mode interference
+  React.useEffect(() => {
+    const styleId = 'leaflet-light-mode-override';
+    let style = document.getElementById(styleId);
+    
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    
+    style.innerHTML = `
+      .leaflet-container,
+      .leaflet-container * {
+        filter: none !important;
+        opacity: 1 !important;
+      }
+      .leaflet-container {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .leaflet-tile-pane {
+        filter: none !important;
+        opacity: 1 !important;
+      }
+      .leaflet-tile {
+        filter: none !important;
+        opacity: 1 !important;
+      }
+      .leaflet-popup-content-wrapper,
+      .leaflet-popup-tip {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: 0 3px 14px rgba(0,0,0,0.4) !important;
+      }
+      .leaflet-popup-content {
+        color: #000000 !important;
+      }
+      .leaflet-popup-content p,
+      .leaflet-popup-content div,
+      .leaflet-popup-content span {
+        color: inherit !important;
+      }
+      .leaflet-container a {
+        color: #0078A8 !important;
+      }
+      .leaflet-bar,
+      .leaflet-bar a,
+      .leaflet-control-zoom-in,
+      .leaflet-control-zoom-out {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border-color: #ccc !important;
+      }
+      .leaflet-control-attribution {
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        color: #000000 !important;
+      }
+    `;
+    
+    return () => {
+      // Don't remove style on unmount since it may be shared by other map instances
+    };
+  }, []);
+
   // Validate center coordinates
   if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') {
     console.error('Invalid center coordinates:', center);

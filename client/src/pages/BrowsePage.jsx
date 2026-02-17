@@ -420,7 +420,7 @@ export default function BrowsePage() {
 
       {/* Map Section */}
       {showMap && (
-        <Card sx={{ mb: 3, height: { xs: 360, md: 520 }, overflow: 'hidden' }}>
+        <Card sx={{ mb: 3, height: { md: 520 }, overflow: 'hidden' }}>
           {loading ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
               <CircularProgress />
