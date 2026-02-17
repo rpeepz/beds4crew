@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 
 import { SnackbarProvider } from "./components/AppSnackbar";
@@ -32,6 +32,21 @@ const LoadingFallback = () => (
     <CircularProgress />
   </Box>
 );
+
+const RouteChangeEffects = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+
+    const activeElement = document.activeElement;
+    if (activeElement && typeof activeElement.blur === "function") {
+      activeElement.blur();
+    }
+  }, [location.pathname, location.search, location.hash]);
+
+  return null;
+};
 
 function App() {
   useEffect(() => {
@@ -66,6 +81,7 @@ function App() {
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <SnackbarProvider>
           <NavigationDrawer>
+            <RouteChangeEffects />
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/register" element={<PublicRoute> <RegisterPage /> </PublicRoute>} />
