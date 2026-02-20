@@ -18,7 +18,7 @@ const geocodeAddress = async (address) => {
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'property-rental-platform/1.0'
+        'User-Agent': 'Beds4Crew/1.0'
       }
     });
     const data = await response.json();
@@ -28,8 +28,8 @@ const geocodeAddress = async (address) => {
         latitude: parseFloat(data[0].lat),
         longitude: parseFloat(data[0].lon)
       };
-      // Cache for 30 days (geocoding results don't change)
-      cache.set(cacheKey, result, 30 * 24 * 60 * 60);
+      // Cache for 7 days (geocoding results don't change frequently)
+      cache.set(cacheKey, result, 7 * 24 * 60 * 60);
       return result;
     }
   } catch (err) {

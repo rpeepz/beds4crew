@@ -32,7 +32,7 @@ router.get('/search', async (req, res) => {
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'property-rental-platform/1.0 (r.papagna.42@gmail.com)'
+        'User-Agent': 'Beds4Crew/1.0 (r.papagna.42@gmail.com)'
       }
     });
     const data = await response.json();
