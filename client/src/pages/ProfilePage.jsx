@@ -449,10 +449,10 @@ export default function ProfilePage() {
         <Box sx={{ display: 'grid', gap: 3 }}>
           <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              Subscription
+              Host Status
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Manage your subscription to keep your account in good standing.
+              Manage your host status by subscribing to Beds4Crew.
             </Typography>
             <Alert
               severity={isSubscriptionActive ? "success" : "warning"}
@@ -462,7 +462,7 @@ export default function ProfilePage() {
                 ? `Active${periodEndLabel ? ` • Renews on ${periodEndLabel}` : ""}`
                 : hasBilling
                   ? `Status: ${normalizedStatus || "Inactive"}`
-                  : "No active subscription"}
+                  : "Not currently subscribed."}
             </Alert>
             <Box display="flex" gap={2} flexWrap="wrap">
               {isSubscriptionActive ? (

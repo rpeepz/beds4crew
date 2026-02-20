@@ -155,6 +155,27 @@ export default function AdminPage() {
     setEditUserOpen(true);
   };
 
+  const handleClearCache = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/properties/admin/clear-cache`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to clear cache");
+      }
+      
+      const data = await res.json();
+      snackbar(data.message, "success");
+    } catch (error) {
+      snackbar(error.message || "Failed to clear cache", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveUser = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/auth/admin/users/${selectedUser._id}`, {
@@ -329,10 +350,11 @@ export default function AdminPage() {
         </Tabs>
 
         {/* Maintenance Actions */}
-        <Box sx={{ p: 2, bgcolor: 'warning.50', borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', flexDirection: "column", bgcolor: 'warning.50', borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
             🔧 Maintenance Actions
           </Typography>
+          <Box sx={{ display: "flex", flexDirection: "row", gap: 2 }}>
           <Button 
             variant="outlined" 
             color="warning"
@@ -342,9 +364,17 @@ export default function AdminPage() {
           >
             {migrationLoading ? <CircularProgress size={20} /> : 'Fix All Bed Availability'}
           </Button>
-          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-            Sets isAvailable=true for ALL beds (fixes false/null/undefined values)
-          </Typography>
+           <Button
+                variant="outlined"
+                color="error"
+                size="large"
+                onClick={handleClearCache}
+                disabled={loading}
+                sx={{ py: 1.5 }}
+              >
+                Clear Server Cache
+              </Button>
+            </Box>
         </Box>
 
         {/* Users Tab */}

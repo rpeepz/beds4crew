@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Typography, Box, Button, Paper, Divider, Switch, FormControlLabel, FormGroup, Grid, Chip, Card, CardContent, Stack } from "@mui/material";
 import PhoneIcon from "@mui/icons-material/Phone";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import PaymentIcon from "@mui/icons-material/Payment";
 import EmailIcon from "@mui/icons-material/Email";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
@@ -53,58 +51,6 @@ export default function SupportPage() {
     setTimeout(() => {
       navigate("/profile");
     }, 1500);
-  };
-
-  const handleToggleRole = async () => {
-    try {
-      setLoading(true);
-      const res = await fetchWithAuth(`${API_URL}/users/toggle-role`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" }
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message);
-      }
-      
-      const data = await res.json();
-      localStorage.setItem("user", JSON.stringify(data.user));
-      setUser(data.user);
-      snackbar(data.message, "success");
-      
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      snackbar(error.message || "Failed to toggle role", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTogglePayment = async () => {
-    try {
-      setLoading(true);
-      const res = await fetchWithAuth(`${API_URL}/users/toggle-payment`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" }
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message);
-      }
-      
-      const data = await res.json();
-      localStorage.setItem("user", JSON.stringify(data.user));
-      setUser(data.user);
-      snackbar(data.message, "success");
-    } catch (error) {
-      snackbar(error.message || "Failed to toggle payment status", "error");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleEmailPreferenceChange = async (preference) => {
@@ -390,59 +336,6 @@ export default function SupportPage() {
             </Typography>
           </>
         )}
-
-        {/* Admin Controls */}
-        {user && 0 ? (
-          <>
-            <Divider sx={{ my: 4 }} />
-            <Typography variant="h6" align="center" color="text.secondary" sx={commonStyles.sectionTitle}>
-              Admin Controls
-            </Typography>
-            <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
-              Current Role: <strong>{user.role}</strong> | Payment Status: <strong>{user.hasPaid ? "Paid" : "Not Paid"}</strong>
-            </Typography>
-            
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Button
-                variant="outlined"
-                color="info"
-                size="large"
-                startIcon={<SwapHorizIcon />}
-                onClick={handleToggleRole}
-                disabled={loading}
-                fullWidth
-                sx={{ py: 1.5 }}
-              >
-                Toggle Role (Guest ↔ Host)
-              </Button>
-
-              <Button
-                variant="outlined"
-                color="warning"
-                size="large"
-                startIcon={<PaymentIcon />}
-                onClick={handleTogglePayment}
-                disabled={loading}
-                fullWidth
-                sx={{ py: 1.5 }}
-              >
-                Toggle Payment Status
-              </Button>
-
-              <Button
-                variant="outlined"
-                color="error"
-                size="large"
-                onClick={handleClearCache}
-                disabled={loading}
-                fullWidth
-                sx={{ py: 1.5 }}
-              >
-                Clear Server Cache
-              </Button>
-            </Box>
-          </>
-        ) : null}
       </Paper>
     </Box>
   );
