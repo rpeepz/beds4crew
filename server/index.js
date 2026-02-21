@@ -67,6 +67,23 @@ app.use("/api/billing", billingRoutes.router);
 const adminRoutes = require("./routes/admin");
 app.use("/api/auth/admin", adminRoutes);
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  const health = {
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development",
+    checks: {
+      database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      stripe: !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID && process.env.STRIPE_WEBHOOK_SECRET)
+    }
+  };
+  
+  const statusCode = health.checks.database === "connected" ? 200 : 503;
+  res.status(statusCode).json(health);
+});
+
 // MongoDB Connection with optimizations
 const mongoURL = process.env.MONGO_URL;
 
@@ -145,4 +162,47 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 Network URL: http://<your-ip>:${PORT}`);
   console.log(`💡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`💡 MongoDB: ${mongoURL ? 'Configured' : '❌ NOT CONFIGURED'}`);
+  
+  // Validate critical environment variables
+  const criticalVars = {
+    'JWT_SECRET': process.env.JWT_SECRET,
+    'REFRESH_TOKEN_SECRET': process.env.REFRESH_TOKEN_SECRET,
+    'MONGO_URL': process.env.MONGO_URL
+  };
+  
+  const stripeVars = {
+    'STRIPE_SECRET_KEY': process.env.STRIPE_SECRET_KEY,
+    'STRIPE_PRICE_ID': process.env.STRIPE_PRICE_ID,
+    'STRIPE_WEBHOOK_SECRET': process.env.STRIPE_WEBHOOK_SECRET
+  };
+  
+  // Check critical variables
+  const missingCritical = Object.keys(criticalVars).filter(key => !criticalVars[key]);
+  if (missingCritical.length > 0) {
+    console.error(`⚠️  WARNING: Missing critical environment variables: ${missingCritical.join(', ')}`);
+  }
+  
+  // Check Stripe variables
+  const missingStripe = Object.keys(stripeVars).filter(key => !stripeVars[key]);
+  if (missingStripe.length > 0) {
+    console.warn(`⚠️  Stripe not fully configured. Missing: ${missingStripe.join(', ')}`);
+    console.warn(`   Subscription features will not work until configured.`);
+  } else {
+    console.log(`✅ Stripe configured`);
+  }
+  
+  // Production mode checks
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🔒 Production mode enabled');
+    
+    // Verify production Stripe keys
+    if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.startsWith('sk_live_')) {
+      console.warn('⚠️  WARNING: Using test Stripe key in production mode!');
+    }
+    
+    // Check CLIENT_URL is set
+    if (!process.env.CLIENT_URL) {
+      console.warn('⚠️  WARNING: CLIENT_URL not set. Stripe redirects may fail.');
+    }
+  }
 });
