@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -35,8 +35,18 @@ const LoadingFallback = () => (
 
 const RouteChangeEffects = () => {
   const location = useLocation();
+  const previousLocationRef = useRef(null);
 
   useEffect(() => {
+    const currentRoute = `${location.pathname}${location.search || ""}`;
+    const previousRoute = previousLocationRef.current;
+
+    if (previousRoute && previousRoute !== currentRoute) {
+      sessionStorage.setItem("previousRoute", previousRoute);
+    }
+    sessionStorage.setItem("currentRoute", currentRoute);
+    previousLocationRef.current = currentRoute;
+
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
 
     const activeElement = document.activeElement;

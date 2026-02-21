@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Box, Typography, Card, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, CircularProgress, MenuItem, Grid, Input, Breadcrumbs, Avatar, Divider, useMediaQuery } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
@@ -22,6 +22,19 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 
 const categories = ["apartment", "condo", "house", "hostel", "flat", "villa"];
+
+const getBreadcrumbLabel = (routePath) => {
+  if (!routePath) return "Listings";
+  if (routePath.startsWith("/browse")) return "Browse";
+  if (routePath.startsWith("/properties")) return "Listings";
+  if (routePath.startsWith("/wishlist")) return "Wishlist";
+  if (routePath.startsWith("/trips")) return "Trips";
+  if (routePath.startsWith("/my-listings")) return "My listings";
+  if (routePath.startsWith("/reservations")) return "Reservations";
+  if (routePath.startsWith("/profile")) return "Profile";
+  if (routePath.startsWith("/")) return "Dashboard";
+  return "Back";
+};
 
 export default function PropertyDetailPage() {
   const { id } = useParams();
@@ -52,8 +65,18 @@ export default function PropertyDetailPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const snackbar = useSnackbar();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down("sm"));
+  const previousRoute = (() => {
+    const fromState = location.state?.from;
+    const fromStorage = sessionStorage.getItem("previousRoute");
+    const currentRoute = `${location.pathname}${location.search || ""}`;
+    const candidate = fromState || fromStorage;
+    if (!candidate || candidate === currentRoute) return null;
+    return candidate;
+  })();
+  const previousRouteLabel = getBreadcrumbLabel(previousRoute);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -424,7 +447,13 @@ export default function PropertyDetailPage() {
 
       <Breadcrumbs sx={{ mb: 2 }}>
         <Button variant="text" size="small" onClick={() => navigate("/")}>Home</Button>
-        <Button variant="text" size="small" onClick={() => navigate("/properties")}>Listings</Button>
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => navigate(previousRoute || "/properties")}
+        >
+          {previousRouteLabel}
+        </Button>
         <Typography variant="body2" color="text.secondary">{property.title}</Typography>
       </Breadcrumbs>
 
