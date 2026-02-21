@@ -13,6 +13,7 @@ import BlockPeriodManager from "../components/BlockPeriodManager";
 import BedSelector from "../components/BedSelector";
 import BedAvailabilityGrid from "../components/BedAvailabilityGrid";
 import MapView from "../components/HotelMapView";
+import MediaGallery from "../components/MediaGallery";
 import { commonStyles } from "../utils/styleConstants";
 import { formatImageUrl, getListingMetrics } from "../utils/helpers";
 import RatingStars from "../components/RatingStars";
@@ -458,68 +459,17 @@ export default function PropertyDetailPage() {
 
       <Grid container spacing={4}>
         <Grid item xs={12} md={8} lg={12}>
-          <Card sx={{ p: 2.5, borderRadius: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Media gallery</Typography>
-            {property.images?.length > 0 ? (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
-                  gap: 2,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: "100%",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    aspectRatio: { xs: "4 / 3", md: "16 / 9" },
-                    bgcolor: "grey.100",
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={formatImageUrl(property.images[0].path || property.images[0])}
-                    alt={property.title}
-                    loading="lazy"
-                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </Box>
-                <Box
-                  sx={{
-                    display: { xs: "flex", md: "grid" },
-                    gap: 1,
-                    gridTemplateRows: { md: "repeat(3, 1fr)" },
-                    overflowX: { xs: "auto", md: "visible" },
-                    pb: { xs: 1, md: 0 },
-                  }}
-                >
-                  {property.images.slice(1, 4).map((img, idx) => (
-                    <Box
-                      key={idx}
-                      sx={{
-                        minWidth: { xs: 140, sm: 180, md: "auto" },
-                        borderRadius: 2,
-                        overflow: "hidden",
-                        aspectRatio: { xs: "4 / 3", md: "4 / 3" },
-                        bgcolor: "grey.100",
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={formatImageUrl(img.path || img)}
-                        alt={img.caption || property.title}
-                        loading="lazy"
-                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">No images yet.</Typography>
-            )}
-          </Card>
+          {/* Instagram-Style Media Gallery */}
+          {property.images?.length > 0 && (
+            <Card sx={{ p: { xs: 0, sm: 2.5 }, borderRadius: { xs: 0, sm: 3 }, mb: 3, overflow: "hidden" }}>
+              <MediaGallery 
+                images={property.images}
+                altPrefix={property.title}
+                formatImageUrl={formatImageUrl}
+                columns={3}
+              />
+            </Card>
+          )}
 
           {isOwner && property.images?.length > 0 && (
             <Card sx={{ p: 2.5, borderRadius: 3, mb: 3 }}>
