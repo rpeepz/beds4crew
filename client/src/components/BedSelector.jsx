@@ -100,12 +100,14 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
   useEffect(() => {
     if (useSimplePricing && property.type === "accommodation") {
       // Whole property booking with simple pricing
-      onSelectionChange({
+      const selection = {
         bookedBeds: [],
         guestCount: guestCount,
         totalPrice: totalPrice,
         valid: guestCount > 0 && guestCount <= property.maxGuests
-      });
+      };
+      console.log('BedSelector: Sending simple pricing selection to parent:', selection);
+      onSelectionChange(selection);
     } else {
       // Per-bed booking
       const bedDetails = selectedBeds.map(bedKey => {
@@ -120,32 +122,45 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
 
       const allGuestsAssigned = Object.keys(guestBedAssignments).length === guestCount;
       
-      onSelectionChange({
+      const selection = {
         bookedBeds: bedDetails,
         guestCount: guestCount,
         totalPrice: totalPrice,
         valid: selectedBeds.length > 0 && allGuestsAssigned
+      };
+      console.log('BedSelector: Sending per-bed selection to parent:', {
+        ...selection,
+        selectedBeds: selectedBeds,
+        assignments: guestBedAssignments
       });
+      onSelectionChange(selection);
     }
   }, [selectedBeds, guestCount, guestBedAssignments, totalPrice, useSimplePricing, property, availableBeds, onSelectionChange]);
 
   const handleBedToggle = (bedKey) => {
     setSelectedBeds(prev => {
-      const newSelection = prev.includes(bedKey)
+      const isSelected = prev.includes(bedKey);
+      
+      // If trying to add a bed and already at guest count limit, don't add
+      if (!isSelected && prev.length >= guestCount) {
+        console.log('BedSelector: Bed limit reached. Guest count:', guestCount, 'Selected beds:', prev.length);
+        return prev;
+      }
+
+      const newSelection = isSelected
         ? prev.filter(b => b !== bedKey)
         : [...prev, bedKey];
       
-      // Reset guest assignments when beds change
-      if (newSelection.length < prev.length) {
-        // Bed was removed, remove any assignments to it
-        const newAssignments = { ...guestBedAssignments };
-        Object.keys(newAssignments).forEach(guestNum => {
-          if (newAssignments[guestNum] === bedKey) {
-            delete newAssignments[guestNum];
-          }
-        });
-        setGuestBedAssignments(newAssignments);
-      }
+      console.log('BedSelector: Bed toggled', { bedKey, isSelected, newSelection });
+      
+      // Clean up guest assignments when beds change
+      const newAssignments = { ...guestBedAssignments };
+      Object.keys(newAssignments).forEach(guestNum => {
+        if (!newSelection.includes(newAssignments[guestNum])) {
+          delete newAssignments[guestNum];
+        }
+      });
+      setGuestBedAssignments(newAssignments);
       
       return newSelection;
     });
@@ -159,7 +174,16 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
   };
 
   const handleGuestCountChange = (count) => {
+    console.log('BedSelector: Guest count changed to', count);
     setGuestCount(count);
+    // Trim selected beds to guest count
+    setSelectedBeds(prev => {
+      const trimmed = prev.slice(0, count);
+      if (trimmed.length !== prev.length) {
+        console.log('BedSelector: Trimmed beds from', prev.length, 'to', trimmed.length);
+      }
+      return trimmed;
+    });
     // Reset assignments if guest count changes
     setGuestBedAssignments({});
   };
@@ -238,6 +262,7 @@ export default function BedSelector({ property, startDate, endDate, onSelectionC
                   <Checkbox
                     checked={selectedBeds.includes(bedKey)}
                     onChange={() => handleBedToggle(bedKey)}
+                    disabled={!selectedBeds.includes(bedKey) && selectedBeds.length >= guestCount}
                   />
                 }
                 label={

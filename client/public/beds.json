@@ -10,7 +10,7 @@
           "length": 75,
           "height": null
         },
-        "description": "Narrow bed for one person, commonly used in children’s rooms, dorms, and shared spaces.",
+        "description": "Narrow bed for one person, commonly used in children's rooms, dorms, and shared spaces.",
         "image_urls": [
           "https://unsplash.com/photos/white-bedspread-on-bed-frame"
         ]
@@ -92,65 +92,50 @@
       }
     ],
   
-    "structural_and_frame": [
+    "space_saving_and_shared": [
       {
-        "id": "bed_frame_001",
-        "name": "Platform Bed",
-        "canonical_size": "Varies",
+        "id": "bed_shared_001",
+        "name": "Bunk Bed",
+        "canonical_size": "Twin",
+        "aliases": ["Bunk Beds"],
+        "dimensions": {
+          "width": 39,
+          "length": 75,
+          "height": 65
+        },
+        "description": "Two beds stacked vertically, commonly used in children's rooms, dorms, and shared bedrooms to save space.",
+        "image_urls": [
+          "https://unsplash.com/photos/bunk-bed-kids-room"
+        ]
+      },
+      {
+        "id": "bed_shared_002",
+        "name": "Loft Bed",
+        "canonical_size": "Twin",
         "aliases": [],
         "dimensions": {
-          "width": null,
-          "length": null,
-          "height": 14
+          "width": 39,
+          "length": 75,
+          "height": 72
         },
-        "description": "Bed frame with slats or solid base, supporting a mattress without a box spring.",
+        "description": "Elevated bed with open space underneath for a desk, storage, or seating area. Popular in dorms and small apartments.",
         "image_urls": [
-          "https://unsplash.com/photos/platform-bed-frame"
+          "https://unsplash.com/photos/loft-bed-dorm"
         ]
       },
       {
-        "id": "bed_frame_002",
-        "name": "Panel Bed",
-        "canonical_size": "Varies",
+        "id": "bed_shared_003",
+        "name": "Trundle Bed",
+        "canonical_size": "Twin",
         "aliases": [],
         "dimensions": {
-          "width": null,
-          "length": null,
-          "height": 24
+          "width": 39,
+          "length": 75,
+          "height": 8
         },
-        "description": "Traditional bed frame using headboard, footboard, and side rails with a box spring.",
+        "description": "Low bed on wheels that slides under another bed, ideal for sleepovers and guest rooms.",
         "image_urls": [
-          "https://unsplash.com/photos/traditional-panel-bed"
-        ]
-      },
-      {
-        "id": "bed_frame_003",
-        "name": "Murphy Bed",
-        "canonical_size": "Varies",
-        "aliases": ["Wall Bed"],
-        "dimensions": {
-          "width": null,
-          "length": null,
-          "height": 16
-        },
-        "description": "Wall-mounted bed that folds away to save floor space.",
-        "image_urls": [
-          "https://commons.wikimedia.org/wiki/File:Murphy_bed_open.jpg"
-        ]
-      },
-      {
-        "id": "bed_frame_004",
-        "name": "Captain’s Bed",
-        "canonical_size": "Varies",
-        "aliases": ["Storage Bed"],
-        "dimensions": {
-          "width": null,
-          "length": null,
-          "height": 18
-        },
-        "description": "Bed with built-in drawers or storage compartments underneath the mattress.",
-        "image_urls": [
-          "https://unsplash.com/photos/storage-bed-drawers"
+          "https://unsplash.com/photos/trundle-bed"
         ]
       }
     ],
@@ -236,4 +221,3 @@
       }
     ]
   }
-  

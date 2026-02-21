@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
+  Avatar,
   Box,
   Typography,
   TextField,
@@ -234,6 +235,25 @@ export default function BrowsePage() {
           handleResultFocus(prop);
         }}
       />
+            <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 1.2 }}>
+      <Box display="flex" flexWrap="wrap" alignItems="center" gap={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Avatar
+                    sx={{ width: 32, height: 32, fontSize: 14 }}
+                    src={prop.ownerHost?.profileImagePath || ""}
+                    alt={prop.ownerHost?.firstName || "Host"}
+                  >
+                    {prop.ownerHost?.firstName?.[0] || "H"}
+                  </Avatar>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {prop.ownerHost?.firstName ? `${prop.ownerHost.firstName} ${prop.ownerHost.lastName || ""}` : "Verified Host"}
+                  </Typography>
+
+                </Box>
+                <Typography variant="body2" color="text.secondary">{prop.city}, {prop.country}</Typography>
+              </Box>
+      </CardContent>
+      
       <CardContent sx={{ flexGrow: 1 }}>
         <Typography variant="h6" noWrap title={prop.title}>
           {prop.title}

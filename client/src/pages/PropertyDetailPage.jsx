@@ -104,6 +104,7 @@ export default function PropertyDetailPage() {
   }, [isOwner, searchParams]);
 
   const handleBookingSelectionChange = useCallback((selection) => {
+    console.log('PropertyDetailPage: Received booking selection from BedSelector:', selection);
     setBookingSelection(selection);
   }, []);
 
@@ -123,12 +124,12 @@ export default function PropertyDetailPage() {
     }
 
     // Check if selected dates have any confirmed bookings or blocked periods
+    const isWholePropertyRequest = property.type === "accommodation" && property.pricePerNight > 0;
     const start = startDate;
     const end = endDate;
     let current = start;
     
     while (current.isBefore(end) || current.isSame(end, "day")) {
-      const dateStr = current.format("YYYY-MM-DD");
       const blockedOnDate = blockedPeriods.some(block => {
         const blockStart = dayjs(block.startDate);
         const blockEnd = dayjs(block.endDate);
@@ -138,7 +139,14 @@ export default function PropertyDetailPage() {
       const bookedOnDate = bookings.some(booking => {
         const bookStart = dayjs(booking.startDate);
         const bookEnd = dayjs(booking.endDate);
-        return current.isBetween(bookStart, bookEnd, null, "[]");
+        const overlaps = current.isBetween(bookStart, bookEnd, null, "[]");
+        if (!overlaps) return false;
+
+        // For whole-property booking requests, any overlap blocks the date.
+        if (isWholePropertyRequest) return true;
+
+        // For per-bed booking requests, only whole-property bookings block the date.
+        return !booking.bookedBeds || booking.bookedBeds.length === 0;
       });
       
       if (blockedOnDate || bookedOnDate) {
@@ -446,7 +454,13 @@ export default function PropertyDetailPage() {
         </Box>
         <Box display="flex" flexWrap="wrap" alignItems="center" gap={2}>
           <Box display="flex" alignItems="center" gap={1}>
-            <Avatar sx={{ width: 32, height: 32 }}>{property.ownerHost?.firstName?.[0] || "H"}</Avatar>
+            <Avatar
+              sx={{ width: 32, height: 32, fontSize: 14 }}
+              src={property.ownerHost?.profileImagePath || ""}
+              alt={property.ownerHost?.firstName || "Host"}
+            >
+              {property.ownerHost?.firstName?.[0] || "H"}
+            </Avatar>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {property.ownerHost?.firstName ? `${property.ownerHost.firstName} ${property.ownerHost.lastName || ""}` : "Verified Host"}
             </Typography>
@@ -865,7 +879,7 @@ export default function PropertyDetailPage() {
                       No host stats yet.
                     </Typography>
                   )}
-                  <Button variant="outlined" fullWidth onClick={() => navigate("/profile")}>View Host profile</Button>
+                  {/* TODO <Button variant="outlined" fullWidth onClick={() => navigate("/profile")}>View Host profile</Button> */}
               </Card>
             
           </Box>

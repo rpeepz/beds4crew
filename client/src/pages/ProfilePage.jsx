@@ -57,6 +57,14 @@ export default function ProfilePage() {
   const snackbar = useSnackbar();
 
   useEffect(() => {
+    if (storedUser.role === "host" && storedUser.id) {
+      fetchWithAuth(`${API_URL}/properties/mine`)
+        .then((res) => res.json())
+        .then(setListings)
+        .catch(() => {});
+      return;
+    }
+
     fetch(`${API_URL}/properties`)
       .then((res) => res.json())
       .then((data) => {
@@ -79,7 +87,7 @@ export default function ProfilePage() {
         })
         .catch(err => console.error('Failed to load email preferences:', err));
     }
-  }, [storedUser.id]);
+  }, [storedUser.id, storedUser.role]);
 
   useEffect(() => {
     if (!storedUser.id) return;
@@ -285,6 +293,29 @@ export default function ProfilePage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
+        
+        // Handle duplicate subscription case
+        if (errorData?.hasActiveSubscription) {
+          snackbar("You already have an active subscription", "info");
+          // Refresh user data to sync subscription status
+          const userRes = await fetchWithAuth(`${API_URL}/auth/me`);
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            const updatedUser = {
+              ...storedUser,
+              ...userData,
+              id: userData._id || userData.id || storedUser.id,
+            };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            setSubscriptionInfo({
+              status: userData.subscriptionStatus || "",
+              currentPeriodEnd: userData.subscriptionCurrentPeriodEnd || null,
+              hasPaid: userData.hasPaid || false,
+            });
+          }
+          return;
+        }
+        
         throw new Error(errorData?.message || "Failed to start checkout");
       }
 
@@ -321,6 +352,47 @@ export default function ProfilePage() {
       }
     } catch (error) {
       snackbar(error.message || "Failed to open billing portal", "error");
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleSyncSubscription = async () => {
+    try {
+      setBillingLoading(true);
+      const res = await fetchWithAuth(`${API_URL}/billing/sync-subscription`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to sync subscription");
+      }
+
+      const data = await res.json();
+      
+      if (data.synced) {
+        // Refresh user data
+        const userRes = await fetchWithAuth(`${API_URL}/auth/me`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          const updatedUser = {
+            ...storedUser,
+            ...userData,
+            id: userData._id || userData.id || storedUser.id,
+          };
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+          setSubscriptionInfo({
+            status: userData.subscriptionStatus || "",
+            currentPeriodEnd: userData.subscriptionCurrentPeriodEnd || null,
+            hasPaid: userData.hasPaid || false,
+          });
+        }
+        
+        snackbar(data.message || "Subscription synced successfully", "success");
+      }
+    } catch (error) {
+      snackbar(error.message || "Failed to sync subscription", "error");
     } finally {
       setBillingLoading(false);
     }
@@ -395,28 +467,34 @@ export default function ProfilePage() {
       </Tabs>
 
       {tab === 0 && (
-        <Grid container spacing={3}>
-          {listings.length === 0 ? (
-            <Grid item xs={12}>
-              <Card sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  No listings yet. {storedUser.role === "host" ? "Create your first listing to build trust and visibility." : "You must be a host to create listings."}
-                </Typography>
-                {storedUser.role === "host" && (
+        storedUser.role === "host" ? (
+          <Grid container spacing={3}>
+            {listings.length === 0 ? (
+              <Grid item xs={12}>
+                <Card sx={{ p: 3, borderRadius: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No listings yet. Create your first listing to build trust and visibility.
+                  </Typography>
                   <Button variant="contained" sx={{ mt: 2 }} href="/add-property">
                     Add a listing
                   </Button>
-                )}
-              </Card>
-            </Grid>
-          ) : (
-            listings.map((listing) => (
-              <Grid item xs={12} sm={6} md={4} key={listing._id}>
-                <PropertyCard property={listing} showStatus showWishlist={false} />
+                </Card>
               </Grid>
-            ))
-          )}
-        </Grid>
+            ) : (
+              listings.map((listing) => (
+                <Grid item xs={12} sm={6} md={4} key={listing._id}>
+                  <PropertyCard property={listing} showStatus showWishlist={false} />
+                </Grid>
+              ))
+            )}
+          </Grid>
+        ) : (
+          <Card sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              You must be a host to view listings.
+            </Typography>
+          </Card>
+        )
       )}
 
       {tab === 1 && (
@@ -482,6 +560,13 @@ export default function ProfilePage() {
                   {billingLoading ? "Redirecting..." : "Start subscription"}
                 </Button>
               )}
+              <Button
+                variant="outlined"
+                onClick={handleSyncSubscription}
+                disabled={billingLoading}
+              >
+                {billingLoading ? "Syncing..." : "Sync with Stripe"}
+              </Button>
             </Box>
           </Card>
           {/* Personal Info */}

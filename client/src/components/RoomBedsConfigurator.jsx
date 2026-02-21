@@ -45,7 +45,7 @@ export default function RoomBedsConfigurator({
       .then((data) => {
         const allBeds = [
           ...data.most_common,
-          ...data.structural_and_frame,
+          ...data.space_saving_and_shared,
           ...data.sofa_and_convertible,
           ...data.portable_and_temporary,
         ];

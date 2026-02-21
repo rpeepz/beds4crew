@@ -31,7 +31,7 @@ export default function PropertyCalendar({
       const count = availableBeds.length > 0 ? availableBeds.length : beds.length;
       return sum + count;
     }, 0) || 0;
-    const totalBeds = Math.max(bedsFromRooms, property?.maxGuests || 0);
+    const totalBeds = bedsFromRooms || (property?.maxGuests || 0);
 
     // Calculate bed availability for each date
     if (property?.rooms) {
@@ -72,7 +72,7 @@ export default function PropertyCalendar({
             
             availability.booked += bedCount;
             occupiedDates.add(dateStr);
-            availability.available = Math.max(0, availability.total - availability.booked - availability.pending - availability.blocked);
+            availability.available = Math.max(0, availability.total - availability.booked - availability.blocked);
           }
           
           current = current.add(1, "day");
@@ -97,7 +97,7 @@ export default function PropertyCalendar({
             
             availability.pending += bedCount;
             pendingDates.add(dateStr);
-            availability.available = Math.max(0, availability.total - availability.booked - availability.pending - availability.blocked);
+            availability.available = Math.max(0, availability.total - availability.booked - availability.blocked);
           }
           
           current = current.add(1, "day");
@@ -120,7 +120,7 @@ export default function PropertyCalendar({
             if (block.blockType === "entire") {
               blockedBedCount = totalBeds;
             } else if (block.blockType === "room" && property.rooms[block.roomIndex]) {
-              blockedBedCount = property.rooms[block.roomIndex].beds.filter(b => b.isAvailable).length;
+              blockedBedCount = property.rooms[block.roomIndex].beds.filter(b => b.isAvailable !== false).length;
             } else if (block.blockType === "bed") {
               blockedBedCount = 1;
             }
@@ -202,7 +202,7 @@ export default function PropertyCalendar({
     }
 
     return months;
-  }, [bookings, blockedPeriods, monthsToShow, property]);
+  }, [bookings, blockedPeriods, monthsToShow, pendingBookings, property]);
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -288,10 +288,14 @@ export default function PropertyCalendar({
               {/* Calendar days */}
               <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: { xs: 0.35, sm: 0.5 } }}>
                 {month.days.map((day, dayIdx) => {
-                  const hasPartialAvailability = day?.bedAvailability && 
-                    day.bedAvailability.available > 0 && 
-                    day.bedAvailability.available < day.bedAvailability.total &&
-                    !day.bedAvailability.pending;
+                  const hasAvailability = day?.bedAvailability && day.bedAvailability.total > 0;
+                  const hasPending = hasAvailability && day.bedAvailability.pending > 0;
+                  const hasBooked = hasAvailability && day.bedAvailability.booked > 0;
+                  const hasBlocked = hasAvailability && day.bedAvailability.blocked > 0;
+                  const isFullyBooked = hasAvailability && day.bedAvailability.available <= 0;
+                  const isPendingOnly = hasAvailability && hasPending && !hasBooked && !hasBlocked;
+                  const isPartiallyBooked = hasAvailability && !isFullyBooked && (hasBooked || hasBlocked);
+                  const isMixedPendingAndPartial = hasAvailability && hasPending && isPartiallyBooked;
                   
                   const tooltipContent = day?.bedAvailability ? (
                     <Box>
@@ -331,20 +335,25 @@ export default function PropertyCalendar({
                           bgcolor: day
                             ? day.isPast
                               ? "#e0e0e0"
-                              : day.isBooked || (day.isBlocked && !isOwner)
-                              ? "#f44336"
-                              : day.bedAvailability?.pending && day.bedAvailability.pending > 0
-                              ? "#2196f3"
-                              : hasPartialAvailability && !day.bedAvailability?.pending
-                              ? "#ffeb3b"
                               : day.isBlocked && isOwner
                               ? "#ff9800"
+                              : isFullyBooked || (day.isBlocked && !isOwner)
+                              ? "#f44336"
+                              : isMixedPendingAndPartial
+                              ? "transparent"
+                              : isPendingOnly
+                              ? "#2196f3"
+                              : isPartiallyBooked
+                              ? "#ffeb3b"
                               : "#4caf50"
                             : "transparent",
+                          background: day && isMixedPendingAndPartial
+                            ? "linear-gradient(135deg, #2196f3 0%, #2196f3 50%, #ffeb3b 50%, #ffeb3b 100%)"
+                            : undefined,
                           color: day ? (
                             day.isPast 
                               ? "#757575" 
-                              : (day.bedAvailability?.pending && day.bedAvailability.pending > 0) || hasPartialAvailability
+                              : isPendingOnly || isPartiallyBooked || isMixedPendingAndPartial
                               ? "#000" 
                               : "white"
                           ) : "transparent",

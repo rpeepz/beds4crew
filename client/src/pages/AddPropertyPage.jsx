@@ -44,7 +44,7 @@ const types = [
   { value: "private", label: "Private Room" },
   { value: "bed", label: "Individual Bed" }
 ];
-const facilityOptions = ["WiFi", "Kitchen", "Laundry", "Parking", "Pool", "AC", "TV"];
+const suggestedFacilities = ["AC", "BBQ", "Laundry", "WiFi", "Kitchen", "Parking", "Pool", "TV", "Workspace"];
 
 export default function AddPropertyPage() {
   const [form, setForm] = useState({
@@ -106,6 +106,12 @@ export default function AddPropertyPage() {
     }));
   };
 
+  const handleSuggestedFacility = (facility) => {
+    if (!form.facilities.includes(facility)) {
+      setForm(prev => ({ ...prev, facilities: [...prev.facilities, facility] }));
+    }
+  };
+
   const handleImageChange = (e) => {
     const MAX_IMAGES = 6;
     const newFiles = Array.from(e.target.files);
@@ -136,7 +142,8 @@ export default function AddPropertyPage() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    // Only prevent Enter on single-line fields (not multiline textareas)
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
       e.preventDefault();
     }
   }
@@ -306,12 +313,30 @@ export default function AddPropertyPage() {
             value={facilityInput}
             onChange={e => setFacilityInput(e.target.value)}
             onKeyDown={handleFacilities}
-            helperText="Press Enter to add"
+            helperText="Press Enter to add or select from suggestions below"
             fullWidth
           />
-          <Box display="flex" flexWrap="wrap" mt={1}>
+          <Typography variant="caption" sx={{ display: 'block', mt: 1, mb: 1, color: 'text.secondary' }}>
+            Quick suggestions:
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+            {suggestedFacilities.map(facility => (
+              <Chip 
+                label={facility} 
+                onClick={() => handleSuggestedFacility(facility)}
+                variant="outlined"
+                key={facility}
+                clickable
+                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+              />
+            ))}
+          </Box>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
+            Selected facilities:
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={1}>
             {form.facilities.map(facility => (
-              <Chip label={facility} onDelete={() => handleFacilityDelete(facility)} key={facility} sx={{ mr: 1, mb: 1 }} />
+              <Chip label={facility} onDelete={() => handleFacilityDelete(facility)} key={facility} />
             ))}
           </Box>
         </Box>
