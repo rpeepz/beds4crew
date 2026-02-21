@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet';
 import { Box, Typography, Button, List, ListItem } from '@mui/material';
+import { formatPriceDisplay } from '../utils/api';
 import L from 'leaflet';
 
 // Import Leaflet CSS - this ensures it's bundled correctly
@@ -247,7 +248,7 @@ export default function MapView({
                       {prop.address}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#2E7D32', mb: 1 }}>
-                      ${prop.pricePerNight}/night
+                      {formatPriceDisplay(prop)}
                     </Typography>
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
                       {prop.category} • {prop.type}
@@ -310,7 +311,7 @@ export default function MapView({
                               variant="body2"
                               sx={{ fontWeight: 600, color: '#2E7D32', mb: 0.5 }}
                             >
-                              ${prop.pricePerNight}/night
+                              {formatPriceDisplay(prop)}
                             </Typography>
                             <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
                               {prop.category} • {prop.type}

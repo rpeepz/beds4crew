@@ -4,7 +4,7 @@ import { Box, Typography, Card, Button, TextField, Dialog, DialogTitle, DialogCo
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import { useSnackbar } from "../components/AppSnackbar";
-import { fetchWithAuth, API_URL } from "../utils/api";
+import { fetchWithAuth, formatPriceDisplay, API_URL } from "../utils/api";
 import { LoadingState } from "../components/EmptyState";
 import RoomBedsConfigurator from "../components/RoomBedsConfigurator";
 import PhotoTile from "../components/PhotoTile";
@@ -623,7 +623,7 @@ export default function PropertyDetailPage() {
                     <Box><Typography variant="caption" color="text.secondary">Type</Typography><Typography variant="body2">{property.type}</Typography></Box>
                     <Box><Typography variant="caption" color="text.secondary">Category</Typography><Typography variant="body2">{property.category || "..."}</Typography></Box>
                     <Box><Typography variant="caption" color="text.secondary">Location</Typography><Typography variant="body2">{property.city}, {property.country}</Typography></Box>
-                    <Box><Typography variant="caption" color="text.secondary">Price/night</Typography><Typography variant="body2">${property.pricePerNight || "..."}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary">Price/night</Typography><Typography variant="body2">{formatPriceDisplay(property)}</Typography></Box>
                     <Box><Typography variant="caption" color="text.secondary">Max guests</Typography><Typography variant="body2">{property.maxGuests || "..."}</Typography></Box>
                   </Box>
                 </>
@@ -633,7 +633,7 @@ export default function PropertyDetailPage() {
             <Box sx={{ position: { md: "sticky" }, top: { md: 96 } }}>
               <Card sx={{ p: 3, borderRadius: 3, mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  ${property.pricePerNight || "--"} / night
+                  {formatPriceDisplay(property)}
                 </Typography>
                 {(metrics.responseHours || metrics.completionRate) && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
