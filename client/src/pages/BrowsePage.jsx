@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -20,6 +20,8 @@ import {
   Divider,
   Tooltip,
   Switch,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
@@ -60,12 +62,16 @@ export default function BrowsePage() {
   const [showCustomSearch, setShowCustomSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [onlyWithCoords, setOnlyWithCoords] = useState(false);
   const [sortBy, setSortBy] = useState('recommended');
   const [showMap, setShowMap] = useState(true);
+  const [showControls, setShowControls] = useState(true);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+  const [gridColumns, setGridColumns] = useState(3);
   const snackbar = useSnackbar();
+  const gridOptions = [10, 5, 3, 2, 1];
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const mapSectionRef = useRef(null);
 
   // Fetch user's wishlist
   useEffect(() => {
@@ -124,10 +130,11 @@ export default function BrowsePage() {
     });
   }, [allProperties, center, radius, calculateDistance]);
 
-  // All properties for list view (including those without coordinates)
+  // All properties for list view
+  // Always respect the radius filter - show only properties within radius with coordinates
   const allPropertiesForList = useMemo(() => {
-    return onlyWithCoords ? filteredPropertiesWithCoords : allProperties;
-  }, [allProperties, filteredPropertiesWithCoords, onlyWithCoords]);
+    return filteredPropertiesWithCoords;
+  }, [filteredPropertiesWithCoords]);
 
   // Group properties by proximity (CLUSTER_RADIUS_METERS) - only for map
   const groupedMarkers = useMemo(() => {
@@ -185,6 +192,92 @@ export default function BrowsePage() {
     return sortedProperties.slice(start, start + RESULTS_PER_PAGE);
   }, [sortedProperties, currentPage]);
 
+  const sideResults = useMemo(() => paginatedProperties.slice(0, 2), [paginatedProperties]);
+  const listResults = useMemo(() => paginatedProperties.slice(2), [paginatedProperties]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const handleResultFocus = (property) => {
+    if (!showMap) {
+      setShowMap(true);
+    }
+    if (property.latitude && property.longitude) {
+      setCenter({ lat: property.latitude, lng: property.longitude });
+    }
+    setSelectedPropertyId(property._id);
+    window.requestAnimationFrame(() => {
+      const headerEl = document.querySelector('header, .MuiAppBar-root');
+      const headerOffset = headerEl?.getBoundingClientRect().height || 0;
+      const mapEl = mapSectionRef.current;
+      if (!mapEl) return;
+      const mapTop = mapEl.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: Math.max(mapTop - headerOffset - 12, 0),
+        behavior: 'smooth',
+      });
+    });
+  };
+
+  const renderResultCard = (prop) => (
+    <Card key={prop._id} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <CardMedia
+        component="img"
+        height="180"
+        image={formatImageUrl(prop.images?.[0]?.path || prop.images?.[0]) || 'https://picsum.photos/300/180?random=1'}
+        alt={prop.title}
+        sx={{ cursor: 'pointer' }}
+        onClick={() => {
+          handleResultFocus(prop);
+        }}
+      />
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" noWrap title={prop.title}>
+          {prop.title}
+        </Typography>
+        <Typography variant="body2" color="textSecondary" noWrap>
+          {prop.address}
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
+          {formatPriceDisplay(prop)}
+        </Typography>
+        <Typography variant="caption" color="textSecondary">
+          {prop.category} • {prop.type}
+        </Typography>
+        {!prop.latitude || !prop.longitude ? (
+          <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>
+            Map pin unavailable
+          </Typography>
+        ) : null}
+      </CardContent>
+      <CardActions sx={{ pt: 0 }}>
+        <Button
+          size="small"
+          onClick={() => navigate(`/property/${prop._id}`)}
+        >
+          View Details
+        </Button>
+        <Tooltip title={wishlist.includes(prop._id) ? 'Remove from wishlist' : 'Add to wishlist'}>
+          <IconButton
+            size="small"
+            onClick={() => handleToggleWishlist(prop._id)}
+            color={wishlist.includes(prop._id) ? 'error' : 'default'}
+            aria-label={wishlist.includes(prop._id) ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            {wishlist.includes(prop._id) ? (
+              <FavoriteIcon fontSize="small" />
+            ) : (
+              <FavoriteBorderIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Tooltip>
+      </CardActions>
+    </Card>
+  );
+
   const handleLocationChange = (e) => {
     const selected = POPULAR_LOCATIONS.find(l => l.label === e.target.value);
     if (selected) {
@@ -222,7 +315,6 @@ export default function BrowsePage() {
     setRadius(DEFAULT_RADIUS_MILES);
     setSearchQuery('');
     setShowCustomSearch(false);
-    setOnlyWithCoords(false);
     setSortBy('recommended');
     setCurrentPage(1);
   };
@@ -269,182 +361,184 @@ export default function BrowsePage() {
             Browse Properties
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Search by location, adjust radius, and refine results. Map and list stay in sync.
+            Search by location, adjust radius, and refine results.
           </Typography>
         </Box>
-        <FormControlLabel
-          control={<Switch checked={showMap} onChange={(e) => setShowMap(e.target.checked)} />}
-          label={showMap ? 'Map view on' : 'Map view off'}
-        />
       </Box>
+      <FormControlLabel
+        control={<Switch checked={showMap} onChange={(e) => setShowMap(e.target.checked)} />}
+        label={showMap ? 'Map' : 'Map off'}
+      />
+      <FormControlLabel
+        control={<Switch checked={showControls} onChange={(e) => setShowControls(e.target.checked)} />}
+        label={showControls ? 'Controls' : 'Controls off'}
+      />
 
       {/* Controls Section */}
-      <Card sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-          <TextField
-            select
-            label="Quick Select Location"
-            value={selectedLocation}
-            onChange={handleLocationChange}
-            fullWidth
-            helperText="Choose a popular city"
-          >
-            {POPULAR_LOCATIONS.map(loc => (
-              <MenuItem key={loc.label} value={loc.label}>
-                {loc.label}
-              </MenuItem>
-            ))}
-          </TextField>
+      {showControls && (
+        <Card sx={{ p: 2, mb: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+            <TextField
+              select
+              label="Quick Select Location"
+              value={selectedLocation}
+              onChange={handleLocationChange}
+              fullWidth
+              helperText="Choose a popular city"
+            >
+              {POPULAR_LOCATIONS.map(loc => (
+                <MenuItem key={loc.label} value={loc.label}>
+                  {loc.label}
+                </MenuItem>
+              ))}
+            </TextField>
 
-          <Box>
-            <Typography variant="body2" gutterBottom>
-              Search Radius: {radius} miles
-            </Typography>
-            <Slider
-              value={radius}
-              onChange={(_, val) => {
-                setRadius(val);
-                setCurrentPage(1);
-              }}
-              min={10}
-              max={250}
-              step={10}
-              valueLabelDisplay="auto"
-              aria-label="Search radius in miles"
-            />
-          </Box>
-
-          <TextField
-            select
-            label="Sort by"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            fullWidth
-            helperText="Order your results"
-          >
-            {SORT_OPTIONS.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Box>
-        {/* Custom Location Search Toggle */}
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: { xs: 'flex-start', md: 'center' } }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={showCustomSearch}
-                onChange={(e) => setShowCustomSearch(e.target.checked)}
-              />
-            }
-            label="Search by address or landmark"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={onlyWithCoords}
-                onChange={(e) => {
-                  setOnlyWithCoords(e.target.checked);
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                Search Radius: {radius} miles
+              </Typography>
+              <Slider
+                value={radius}
+                onChange={(_, val) => {
+                  setRadius(val);
                   setCurrentPage(1);
                 }}
+                min={10}
+                max={250}
+                step={10}
+                valueLabelDisplay="auto"
+                aria-label="Search radius in miles"
               />
-            }
-            label="Only show properties visible on the map"
-          />
-          <Button variant="text" onClick={handleResetFilters}>Reset filters</Button>
-        </Box>
-        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          <Chip label={`${allPropertiesForList.length} total`} variant="outlined" />
-          <Chip label={`${filteredPropertiesWithCoords.length} within ${radius} miles`} variant="outlined" />
-          {selectedLocation && <Chip label={`Centered on ${selectedLocation}`} />}
-        </Box>
-        <Typography variant="body2" sx={{ mt: 1 }}>
-          {loading ? (
-            <CircularProgress size={20} sx={{ mr: 1 }} />
-          ) : (
-            <>
-              {sortedProperties.length} results
-              <br />
-              <Typography variant="caption" component="span">
-                ({filteredPropertiesWithCoords.length} within {radius} miles)
-              </Typography>
-            </>
-          )}
-        </Typography>
-
-       
-
-        {/* Custom Location Search Input */}
-        {showCustomSearch && (
-          <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'flex-start', width: '100%' }}>
-            <TextField
-              placeholder="Search address / city / landmark"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleCustomLocationSearch();
-                }
-              }}
-              variant="outlined"
-              size="small"
-              fullWidth
-              inputProps={{ 'aria-label': 'Search address, city, or landmark' }}
-              InputProps={{
-                endAdornment: searchQuery && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setSearchQuery('')}
-                      edge="end"
-                      size="small"
-                      aria-label="Clear search input"
-                    >
-                      <ClearIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleCustomLocationSearch}
-              disabled={searchLoading}
-              sx={{ minWidth: 100, flexShrink: 0 }}
-            >
-              {searchLoading ? 'Searching...' : 'Search'}
-            </Button>
-          </Box>
-        )}
-      </Card>
-
-      {/* Map Section */}
-      {showMap && (
-        <Card sx={{ mb: 3, height: { md: 520 }, overflow: 'hidden' }}>
-          {loading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-              <CircularProgress />
             </Box>
-          ) : filteredPropertiesWithCoords.length > 0 ? (
-            <MapView
-              properties={filteredPropertiesWithCoords}
-              groupedMarkers={groupedMarkers}
-              center={center}
-              radius={radius}
-              onPropertyClick={(id) => navigate(`/property/${id}`)}
+
+            <TextField
+              select
+              label="Sort by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              fullWidth
+              helperText="Order your results"
+            >
+              {SORT_OPTIONS.map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            
+          </Box>
+          {/* Custom Location Search Toggle */}
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: { xs: 'flex-start', md: 'center' } }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={showCustomSearch}
+                  onChange={(e) => setShowCustomSearch(e.target.checked)}
+                />
+              }
+              label="Search by address or landmark"
             />
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', p: 3 }}>
-              <Typography color="text.secondary" textAlign="center">
-                No properties found within {radius} miles.
+            <Button variant="text" onClick={handleResetFilters}>Reset filters</Button>
+          </Box>
+          <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            <Chip label={`${allPropertiesForList.length} total`} variant="outlined" />
+            <Chip label={`${filteredPropertiesWithCoords.length} within ${radius} miles`} variant="outlined" />
+            {selectedLocation && <Chip label={`Centered on ${selectedLocation}`} />}
+          </Box>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {loading ? (
+              <CircularProgress size={20} sx={{ mr: 1 }} />
+            ) : (
+              <>
+                {sortedProperties.length} results
                 <br />
                 <Typography variant="caption" component="span">
-                  Try increasing the search radius or selecting a different location.
+                  ({filteredPropertiesWithCoords.length} within {radius} miles)
                 </Typography>
-              </Typography>
+              </>
+            )}
+          </Typography>
+
+        
+
+          {/* Custom Location Search Input */}
+          {showCustomSearch && (
+            <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'flex-start', width: '100%' }}>
+              <TextField
+                placeholder="Search address / city / landmark"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCustomLocationSearch();
+                  }
+                }}
+                variant="outlined"
+                size="small"
+                fullWidth
+                inputProps={{ 'aria-label': 'Search address, city, or landmark' }}
+                InputProps={{
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setSearchQuery('')}
+                        edge="end"
+                        size="small"
+                        aria-label="Clear search input"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={handleCustomLocationSearch}
+                disabled={searchLoading}
+                sx={{ minWidth: 100, flexShrink: 0 }}
+              >
+                {searchLoading ? 'Searching...' : 'Search'}
+              </Button>
             </Box>
           )}
         </Card>
+      )}
+
+      {/* Map Section */}
+      {showMap && (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 360px' }, gap: 2, mb: 3 }}>
+          <Card ref={mapSectionRef} sx={{ height: { md: 520 }, overflow: 'hidden' }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                <CircularProgress />
+              </Box>
+            ) : filteredPropertiesWithCoords.length > 0 ? (
+              <MapView
+                properties={filteredPropertiesWithCoords}
+                groupedMarkers={groupedMarkers}
+                center={center}
+                radius={radius}
+                selectedPropertyId={selectedPropertyId}
+                onPropertyClick={(id) => navigate(`/property/${id}`)}
+              />
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', p: 3 }}>
+                <Typography color="text.secondary" textAlign="center">
+                  No properties found within {radius} miles.
+                  <br />
+                  <Typography variant="caption" component="span">
+                    Try increasing the search radius or selecting a different location.
+                  </Typography>
+                </Typography>
+              </Box>
+            )}
+          </Card>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {sideResults.map((prop) => renderResultCard(prop))}
+          </Box>
+        </Box>
       )}
 
       {/* Results List Section */}
@@ -453,9 +547,25 @@ export default function BrowsePage() {
           <Typography variant="h6">
             Results ({sortedProperties.length})
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Showing {paginatedProperties.length} of {sortedProperties.length}
-          </Typography>
+          <Box>
+            <Typography variant="body2" gutterBottom>
+              Results per row
+            </Typography>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={gridColumns}
+              onChange={(_, value) => {
+                if (value) setGridColumns(value);
+              }}
+            >
+              {gridOptions.map((option) => (
+                <ToggleButton key={option} value={option}>
+                  {option}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
         </Box>
         <Divider sx={{ mb: 2 }} />
 
@@ -466,69 +576,24 @@ export default function BrowsePage() {
         ) : paginatedProperties.length > 0 ? (
           <>
             <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
-                gap: 2,
+              sx={(theme) => ({
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-start',
+                gap: theme.spacing(3),
                 mb: 3,
-              }}
+              })}
             >
-              {paginatedProperties.map(prop => (
-                <Card key={prop._id} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <CardMedia
-                    component="img"
-                    height="180"
-                    image={formatImageUrl(prop.images?.[0]?.path || prop.images?.[0]) || 'https://picsum.photos/300/180?random=1'}
-                    alt={prop.title}
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      if (prop.latitude && prop.longitude) {
-                        setCenter({ lat: prop.latitude, lng: prop.longitude });
-                      }
-                    }}
-                  />
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" noWrap title={prop.title}>
-                      {prop.title}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" noWrap>
-                      {prop.address}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
-                      {formatPriceDisplay(prop)}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      {prop.category} • {prop.type}
-                    </Typography>
-                    {!prop.latitude || !prop.longitude ? (
-                      <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>
-                        Map pin unavailable
-                      </Typography>
-                    ) : null}
-                  </CardContent>
-                  <CardActions sx={{ pt: 0 }}>
-                    <Button
-                      size="small"
-                      onClick={() => navigate(`/property/${prop._id}`)}
-                    >
-                      View Details
-                    </Button>
-                    <Tooltip title={wishlist.includes(prop._id) ? 'Remove from wishlist' : 'Add to wishlist'}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleWishlist(prop._id)}
-                        color={wishlist.includes(prop._id) ? 'error' : 'default'}
-                        aria-label={wishlist.includes(prop._id) ? 'Remove from wishlist' : 'Add to wishlist'}
-                      >
-                        {wishlist.includes(prop._id) ? (
-                          <FavoriteIcon fontSize="small" />
-                        ) : (
-                          <FavoriteBorderIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                  </CardActions>
-                </Card>
+              {(showMap ? listResults : paginatedProperties).map((prop) => (
+                <Box
+                  key={prop._id}
+                  sx={(theme) => ({
+                    flex: `1 1 calc((100% - (${theme.spacing(3)} * ${gridColumns - 1})) / ${gridColumns})`,
+                    minWidth: 0,
+                  })}
+                >
+                  {renderResultCard(prop)}
+                </Box>
               ))}
             </Box>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet';
 import { Box, Typography, Button, List, ListItem } from '@mui/material';
 import L from 'leaflet';
@@ -79,10 +79,35 @@ export default function MapView({
   groupedMarkers = [],
   center = { lat: 25.7617, lng: -80.1918 },
   radius = 30,
+  selectedPropertyId = null,
   onPropertyClick = () => {},
   height = "500px",
 }) {
   const [expandedCluster, setExpandedCluster] = useState(null);
+  const markerRefs = useRef({});
+
+  const markerKeyByPropertyId = useMemo(() => {
+    const map = {};
+    groupedMarkers.forEach((group, groupIdx) => {
+      if (!group || group.length === 0) return;
+      const markerKey = group.length === 1 ? `single-${group[0]._id}` : `cluster-${groupIdx}`;
+      group.forEach((prop) => {
+        if (prop?._id) {
+          map[prop._id] = markerKey;
+        }
+      });
+    });
+    return map;
+  }, [groupedMarkers]);
+
+  useEffect(() => {
+    if (!selectedPropertyId) return;
+    const key = markerKeyByPropertyId[selectedPropertyId];
+    const marker = key ? markerRefs.current[key] : null;
+    if (marker && typeof marker.openPopup === 'function') {
+      marker.openPopup();
+    }
+  }, [selectedPropertyId, markerKeyByPropertyId]);
 
   // Force Leaflet to always use light theme - prevent dark mode interference
   React.useEffect(() => {
@@ -209,6 +234,9 @@ export default function MapView({
                 key={`single-${prop._id}`}
                 position={position}
                 icon={createMarkerIcon()}
+                ref={(ref) => {
+                  markerRefs.current[`single-${prop._id}`] = ref;
+                }}
               >
                 <Popup closeButton={true}>
                   <Box sx={{ minWidth: '220px' }}>
@@ -249,6 +277,9 @@ export default function MapView({
                 key={`cluster-${groupIdx}`}
                 position={position}
                 icon={createClusterIcon(group.length)}
+                ref={(ref) => {
+                  markerRefs.current[`cluster-${groupIdx}`] = ref;
+                }}
               >
                 <Popup closeButton={true}>
                   <Box sx={{ minWidth: '280px', maxHeight: '400px', overflowY: 'auto' }}>

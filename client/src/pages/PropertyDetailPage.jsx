@@ -750,7 +750,7 @@ export default function PropertyDetailPage() {
                       bookings={bookings}
                       pendingBookings={pendingBookings}
                       blockedPeriods={property.blockedPeriods || []}
-                      monthsToShow={isMobile ? 1 : 2}
+                      monthsToShow={isMobile ? 4 : 4}
                       isOwner={isOwner}
                       property={property}
                     />
