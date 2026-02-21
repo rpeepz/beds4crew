@@ -5,6 +5,8 @@ import {
   Grid,
   Drawer,
   Button,
+  Chip,
+  Stack,
   TextField,
   MenuItem,
   Slider,
@@ -15,6 +17,8 @@ import {
   FormControl,
   Divider,
   Skeleton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { useLocation, useSearchParams } from "react-router-dom";
 import PropertyCard from "../components/PropertyCard";
@@ -39,9 +43,11 @@ export default function PropertyFeedPage() {
   const [instantBook, setInstantBook] = useState(false);
   const [sortBy, setSortBy] = useState("best");
   const [visibleCount, setVisibleCount] = useState(12);
+  const [gridColumns, setGridColumns] = useState(3);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const location = useLocation();
   const snackbar = useSnackbar();
+  const gridOptions = [10, 5, 3, 2, 1];
   
   // Fetch user's wishlist on mount and when navigating to this page
   useEffect(() => {
@@ -139,6 +145,19 @@ export default function PropertyFeedPage() {
     setVisibleCount(12);
   }, [query, category, type, priceRange, minRating, instantBook, sortBy]);
 
+  const activeFilters = useMemo(() => {
+    const items = [];
+    if (category) {
+      items.push({ key: "category", label: `Category: ${category.charAt(0).toUpperCase()}${category.slice(1)}` });
+    }
+    if (type) {
+      const typeLabel =
+        type === "private" ? "Private Room" : type === "bed" ? "Individual Bed" : "Accommodation";
+      items.push({ key: "type", label: `Type: ${typeLabel}` });
+    }
+    return items;
+  }, [category, type]);
+
   const filterPanel = (
     <Box sx={{ width: { xs: 280, md: 300 }, p: 2 }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
@@ -218,14 +237,25 @@ export default function PropertyFeedPage() {
 
   return (
     <Box sx={commonStyles.contentContainer}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2, flexWrap: "wrap" }}>
         <Box>
           <Typography variant="h4" sx={commonStyles.pageTitle}>
             Explore listings
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {filtered.length} results • Fast, verified, and ready to book
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {filtered.length} results
+            </Typography>
+            {activeFilters.length > 0 ? (
+              activeFilters.map((filter) => (
+                <Chip key={filter.key} size="small" label={filter.label} variant="outlined" />
+              ))
+            ) : (
+              <Typography variant="caption" color="text.secondary">
+                No filters applied
+              </Typography>
+            )}
+          </Stack>
         </Box>
         <Button variant="outlined" onClick={() => setFiltersOpen(true)} sx={{ display: { xs: "inline-flex", md: "none" } }}>
           Filters
@@ -237,7 +267,7 @@ export default function PropertyFeedPage() {
           {filterPanel}
         </Box>
         <Box>
-          <Box display="flex" justifyContent="flex-end" sx={{ mb: 2 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2, flexWrap: "wrap" }}>
             <FormControl size="small" sx={{ minWidth: 180 }}>
               <InputLabel id="sort-by-label">Sort by</InputLabel>
               <Select
@@ -252,6 +282,25 @@ export default function PropertyFeedPage() {
                 <MenuItem value="priceHigh">Price: high to low</MenuItem>
               </Select>
             </FormControl>
+            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+              <Typography variant="body2" color="text.secondary">
+                Results per row
+              </Typography>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={gridColumns}
+                onChange={(_, value) => {
+                  if (value) setGridColumns(value);
+                }}
+              >
+                {gridOptions.map((option) => (
+                  <ToggleButton key={option} value={option}>
+                    {option}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </Box>
           </Box>
 
           {loading ? (
@@ -263,18 +312,31 @@ export default function PropertyFeedPage() {
               ))}
             </Grid>
           ) : filtered.length > 0 ? (
-            <Grid container spacing={{ xs: 2, sm: 3 }}>
+            <Box
+              sx={(theme) => ({
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "flex-start",
+                gap: theme.spacing(3),
+              })}
+            >
               {visibleListings.map((prop) => (
-                <Grid item xs={12} sm={6} md={4} key={prop._id}>
+                <Box
+                  key={prop._id}
+                  sx={(theme) => ({
+                    flex: `1 1 calc((100% - (${theme.spacing(3)} * ${gridColumns - 1})) / ${gridColumns})`,
+                    minWidth: 0,
+                  })}
+                >
                   <PropertyCard
                     property={prop}
                     onWishlistToggle={handleToggleWishlist}
                     isWishlisted={wishlist.includes(prop._id)}
                     showWishlist={!!user?.id}
                   />
-                </Grid>
+                </Box>
               ))}
-            </Grid>
+            </Box>
           ) : (
             <NoPropertiesFound />
           )}
