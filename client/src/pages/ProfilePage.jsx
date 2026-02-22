@@ -525,50 +525,7 @@ export default function ProfilePage() {
 
       {tab === 2 && (
         <Box sx={{ display: 'grid', gap: 3 }}>
-          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              Host Status
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Manage your host status by subscribing to Beds4Crew.
-            </Typography>
-            <Alert
-              severity={isSubscriptionActive ? "success" : "warning"}
-              sx={{ mb: 2 }}
-            >
-              {isSubscriptionActive
-                ? `Active${periodEndLabel ? ` • Renews on ${periodEndLabel}` : ""}`
-                : hasBilling
-                  ? `Status: ${normalizedStatus || "Inactive"}`
-                  : "Not currently subscribed."}
-            </Alert>
-            <Box display="flex" gap={2} flexWrap="wrap">
-              {isSubscriptionActive ? (
-                <Button
-                  variant="contained"
-                  onClick={handleManageSubscription}
-                  disabled={billingLoading}
-                >
-                  {billingLoading ? "Opening portal..." : "Manage subscription"}
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={handleStartSubscription}
-                  disabled={billingLoading}
-                >
-                  {billingLoading ? "Redirecting..." : "Start subscription"}
-                </Button>
-              )}
-              <Button
-                variant="outlined"
-                onClick={handleSyncSubscription}
-                disabled={billingLoading}
-              >
-                {billingLoading ? "Syncing..." : "Sync with Stripe"}
-              </Button>
-            </Box>
-          </Card>
+          
           {/* Personal Info */}
           <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
@@ -627,6 +584,52 @@ export default function ProfilePage() {
                 Save changes
               </Button>
             </form>
+          </Card>
+
+          {/* Subscription Management */}
+          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Host Status
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Manage your host status by subscribing to Beds4Crew.
+            </Typography>
+            <Alert
+              severity={isSubscriptionActive ? "success" : "warning"}
+              sx={{ mb: 2 }}
+            >
+              {isSubscriptionActive
+                ? `Active${periodEndLabel ? ` • Renews on ${periodEndLabel}` : ""}`
+                : hasBilling
+                  ? `Status: ${normalizedStatus || "Inactive"}`
+                  : "Not currently subscribed."}
+            </Alert>
+            <Box display="flex" gap={2} flexWrap="wrap">
+              {isSubscriptionActive ? (
+                <Button
+                  variant="contained"
+                  onClick={handleManageSubscription}
+                  disabled={billingLoading}
+                >
+                  {billingLoading ? "Opening portal..." : "Manage subscription"}
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={handleStartSubscription}
+                  disabled={billingLoading}
+                >
+                  {billingLoading ? "Redirecting..." : "Start subscription"}
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                onClick={handleSyncSubscription}
+                disabled={billingLoading}
+              >
+                {billingLoading ? "Syncing..." : "Sync with Stripe"}
+              </Button>
+            </Box>
           </Card>
 
           {/* Email Preferences */}

@@ -1,0 +1,159 @@
+[
+  {
+    "title": "Company",
+    "topics": [
+      {
+        "title": "About",
+        "slug": "about",
+        "description": "Learn about Beds4Crew’s mission, values, and marketplace vision. ",
+        "resourceLink": { "label": "Company overview", "href": "/about" }
+      },
+      {
+        "title": "Careers",
+        "slug": "careers",
+        "description": "Explore open roles and how to join the team.",
+        "resourceLink": { "label": "Open roles", "href": "/careers" }
+      },
+      {
+        "title": "Press",
+        "slug": "press",
+        "description": "Media resources, logos, and brand guidelines.",
+        "resourceLink": { "label": "Press resources", "href": "/press" }
+      },
+      {
+        "title": "Partnerships",
+        "slug": "partnerships",
+        "description": "Partner with us to expand crew housing options.",
+        "resourceLink": { "label": "Partner with us", "href": "/partnerships" }
+      },
+      {
+        "title": "Contact",
+        "slug": "contact",
+        "description": "Reach the team for general inquiries and feedback.",
+        "resourceLink": { "label": "Contact form", "href": "/contact" }
+      }
+    ]
+  },
+  {
+    "title": "Support",
+    "topics": [
+      {
+        "title": "Help Center",
+        "slug": "help-center",
+        "description": "Self-serve guides for booking, hosting, and account help.",
+        "resourceLink": { "label": "Help center articles", "href": "/help-center" }
+      },
+      {
+        "title": "Safety",
+        "slug": "safety",
+        "description": "Safety guidelines for guests and hosts.",
+        "resourceLink": { "label": "Safety guidelines", "href": "/safety" }
+      },
+      {
+        "title": "Cancellation",
+        "slug": "cancellation",
+        "description": "Understand cancellation policies and refund timelines.",
+        "resourceLink": { "label": "Cancellation policy", "href": "/cancellation" }
+      },
+      {
+        "title": "Trust & Safety",
+        "slug": "trust-safety",
+        "description": "Verification, trust badges, and reporting tools.",
+        "resourceLink": { "label": "Trust center", "href": "/trust-safety" }
+      },
+      {
+        "title": "Accessibility",
+        "slug": "accessibility",
+        "description": "Accessibility features and accommodations.",
+        "resourceLink": { "label": "Accessibility support", "href": "/accessibility" }
+      }
+    ]
+  },
+  {
+    "title": "Community",
+    "topics": [
+      {
+        "title": "Host Community",
+        "slug": "host-community",
+        "description": "Tips, resources, and community updates for hosts.",
+        "resourceLink": { "label": "Host resources", "href": "/host-community" }
+      },
+      {
+        "title": "Customer Stories",
+        "slug": "customer-stories",
+        "description": "Success stories from guests and hosts.",
+        "resourceLink": { "label": "Stories", "href": "/customer-stories" }
+      },
+      {
+        "title": "Affiliates",
+        "slug": "affiliates",
+        "description": "Affiliate program details and partner onboarding.",
+        "resourceLink": { "label": "Affiliate details", "href": "/affiliates" }
+      },
+      {
+        "title": "Events",
+        "slug": "events",
+        "description": "Upcoming webinars, meetups, and virtual events.",
+        "resourceLink": { "label": "Event calendar", "href": "/events" }
+      }
+    ]
+  },
+  {
+    "title": "Policies",
+    "topics": [
+      {
+        "title": "Privacy",
+        "slug": "privacy",
+        "description": "How we protect data and handle privacy requests.",
+        "resourceLink": { "label": "Privacy policy", "href": "/privacy" }
+      },
+      {
+        "title": "Terms",
+        "slug": "terms",
+        "description": "Platform terms of service and user responsibilities.",
+        "resourceLink": { "label": "Terms of service", "href": "/terms" }
+      },
+      {
+        "title": "Cookie Policy",
+        "slug": "cookie-policy",
+        "description": "Cookie usage, preferences, and consent.",
+        "resourceLink": { "label": "Cookie policy", "href": "/cookie-policy" }
+      },
+      {
+        "title": "Intellectual Property",
+        "slug": "intellectual-property",
+        "description": "IP guidelines and infringement reporting.",
+        "resourceLink": { "label": "IP reporting", "href": "/intellectual-property" }
+      }
+    ]
+  },
+  {
+    "title": "Social",
+    "topics": [
+      {
+        "title": "LinkedIn",
+        "slug": "linkedin",
+        "description": "Company updates and hiring news.",
+        "resourceLink": { "label": "Follow on LinkedIn", "href": "https://www.linkedin.com" }
+      },
+      {
+        "title": "Twitter",
+        "slug": "twitter",
+        "description": "Product updates, support notices, and community highlights.",
+        "resourceLink": { "label": "Follow on Twitter", "href": "https://www.twitter.com" }
+      },
+      {
+        "title": "Instagram",
+        "slug": "instagram",
+        "description": "Featured listings, photos, and host spotlights.",
+        "resourceLink": { "label": "Follow on Instagram", "href": "https://www.instagram.com" }
+      },
+      {
+        "title": "YouTube",
+        "slug": "youtube",
+        "description": "Tutorials, walkthroughs, and event replays.",
+        "resourceLink": { "label": "Watch on YouTube", "href": "https://www.youtube.com" }
+      }
+    ]
+  }
+]

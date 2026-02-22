@@ -1,0 +1,76 @@
+[
+  {
+    "slug": "password-reset",
+    "question": "How do I change or reset my password?",
+    "summary": "Template TODO: password self-service flow is planned.",
+    "status": "todo",
+    "answer": "Template TODO: this feature is not fully implemented yet. Once available, this section should include direct links for 'Change Password' (logged-in) and 'Forgot Password' (logged-out).",
+    "steps": [
+      "Go to Profile from the top-right account menu.",
+      "Open Account Settings.",
+      "Use Change Password or Forgot Password based on your login state.",
+      "Check your email for the confirmation/reset link."
+    ],
+    "photos": [
+      {
+        "src": "/bed.svg",
+        "alt": "Password settings placeholder",
+        "caption": "Replace with screenshot: Profile > Account Settings > Password"
+      }
+    ]
+  },
+  {
+    "slug": "become-host",
+    "question": "How do I become a host?",
+    "summary": "Open your profile and use Account Settings to start hosting setup.",
+    "status": "active",
+    "answer": "Navigate to your profile, access Account Settings, and select Start Subscription to activate hosting features. Your account will be reviewed and activated within 24 hours.",
+    "steps": [
+      "Make sure you're logged in.",
+      "Go to your Profile page.",
+      "Click Account Settings.",
+      "Scroll down to Host Status.",
+      "Select Start Subscription.",
+      "Your account should be activated for hosting within 24 hours. You can then create your first listing from the Host dashboard."
+    ]
+  },
+  {
+    "slug": "use-explore",
+    "question": "How do I use Explore effectively?",
+    "summary": "Use Explore to browse listings by location, map, and property details.",
+    "status": "active",
+    "answer": "Explore helps you discover available properties quickly. Start with location, then compare amenities, ratings, and rules.",
+    "steps": [
+      "Open Explore / Browse listings.",
+      "Set location and view results on map/list.",
+      "Open a property card to review beds, amenities, and photos.",
+      "Save favorites to shortlist options."
+    ]
+  },
+  {
+    "slug": "search-by-date",
+    "question": "How do I search by date?",
+    "summary": "Pick check-in and check-out dates to filter to available stays.",
+    "status": "active",
+    "answer": "Date filters reduce noise and show only properties that can accommodate your travel window.",
+    "steps": [
+      "Open Explore / Search.",
+      "Set check-in and check-out dates.",
+      "Apply filters and review available listings.",
+      "Adjust dates if availability is limited."
+    ]
+  },
+  {
+    "slug": "how-to-book",
+    "question": "How do I book a property?",
+    "summary": "Choose dates, review pricing/rules, and submit your booking request.",
+    "status": "active",
+    "answer": "Booking is completed from the property detail page after selecting dates and confirming guest details.",
+    "steps": [
+      "Open a property detail page.",
+      "Select travel dates and confirm bed/room setup if needed.",
+      "Review total price, cancellation terms, and house rules.",
+      "Submit booking and watch for confirmation updates."
+    ]
+  }
+]
