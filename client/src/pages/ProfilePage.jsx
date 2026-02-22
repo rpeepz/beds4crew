@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [passwordEmailLoading, setPasswordEmailLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [billingLoading, setBillingLoading] = useState(false);
   const [subscriptionInfo, setSubscriptionInfo] = useState({
@@ -281,6 +282,26 @@ export default function ProfilePage() {
       snackbar(error.message || "Failed to update preference", "error");
     } finally {
       setSavingPrefs(false);
+    }
+  };
+
+  const handleRequestPasswordChange = async () => {
+    try {
+      setPasswordEmailLoading(true);
+      const res = await fetchWithAuth(`${API_URL}/auth/password/request-change`, {
+        method: "POST",
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to send password change email");
+      }
+
+      snackbar(data.message || "Password change email sent", "success");
+    } catch (error) {
+      snackbar(error.message || "Failed to send password change email", "error");
+    } finally {
+      setPasswordEmailLoading(false);
     }
   };
 
@@ -584,6 +605,22 @@ export default function ProfilePage() {
                 Save changes
               </Button>
             </form>
+          </Card>
+
+          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Password
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              For account security, password updates are confirmed through an email link valid for 30 minutes.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={handleRequestPasswordChange}
+              disabled={passwordEmailLoading}
+            >
+              {passwordEmailLoading ? "Sending..." : "Change password"}
+            </Button>
           </Card>
 
           {/* Subscription Management */}

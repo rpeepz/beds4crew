@@ -8,6 +8,9 @@ const UserSchema = new mongoose.Schema(
     bio:       { type: String, default: "" },
     email:     { type: String, required: true, unique: true },
     password:  { type: String, required: true },
+    passwordResetToken: { type: String, default: null },
+    passwordResetExpiresAt: { type: Date, default: null },
+    passwordResetRequestedAt: { type: Date, default: null },
     profileImagePath: { type: String, default: "" },
 
     // Lists for guest and host features

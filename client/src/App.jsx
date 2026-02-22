@@ -13,6 +13,8 @@ import { fetchWithAuth, API_URL } from "./utils/api";
 // Lazy load pages for code splitting
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const AddPropertyPage = lazy(() => import("./pages/AddPropertyPage"));
 const PropertyFeedPage = lazy(() => import("./pages/PropertyFeedPage"));
@@ -96,6 +98,8 @@ function App() {
               <Routes>
                 <Route path="/register" element={<PublicRoute> <RegisterPage /> </PublicRoute>} />
                 <Route path="/login" element={<PublicRoute> <LoginPage /> </PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute> <ForgotPasswordPage /> </PublicRoute>} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/add-property" element={<ProtectedRoute requiredRole="host"> <AddPropertyPage /> </ProtectedRoute>} />
                 <Route path="/properties" element={<PropertyFeedPage />} />

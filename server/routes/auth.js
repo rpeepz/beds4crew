@@ -1,5 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const verifyToken = require("../middleware/auth");
 const { uploadSingle } = require("../utils/fileUpload");
@@ -10,6 +11,34 @@ const emailService = require("../utils/emailService");
 const User = require("../models/User");
 const RefreshToken = require("../models/RefreshToken");
 const router = express.Router();
+
+const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_REQUEST_COOLDOWN_MS = 60 * 1000;
+
+const createPasswordResetToken = () => {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+  return { rawToken, hashedToken };
+};
+
+const issuePasswordResetForUser = async (user) => {
+  const now = Date.now();
+  const lastRequestedAt = user.passwordResetRequestedAt ? new Date(user.passwordResetRequestedAt).getTime() : 0;
+
+  if (lastRequestedAt && now - lastRequestedAt < PASSWORD_RESET_REQUEST_COOLDOWN_MS) {
+    const waitSeconds = Math.ceil((PASSWORD_RESET_REQUEST_COOLDOWN_MS - (now - lastRequestedAt)) / 1000);
+    return { ok: false, cooldownSeconds: waitSeconds };
+  }
+
+  const { rawToken, hashedToken } = createPasswordResetToken();
+  user.passwordResetToken = hashedToken;
+  user.passwordResetExpiresAt = new Date(now + PASSWORD_RESET_TOKEN_TTL_MS);
+  user.passwordResetRequestedAt = new Date(now);
+  await user.save();
+
+  await emailService.sendPasswordResetEmail(user.email, user.firstName, rawToken);
+  return { ok: true };
+};
 
 // Register route
 router.post("/register", uploadSingle, async (req, res) => {
@@ -211,6 +240,90 @@ router.post("/logout", async (req, res) => {
     return res
       .status(500)
       .json({ message: "Logout failed", error: error.message });
+  }
+});
+
+router.post("/password/request-reset", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const genericMessage = "If an account exists for this email, a reset link has been sent.";
+
+    if (!email || !validateEmail(email)) {
+      return res.json({ message: genericMessage });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.json({ message: genericMessage });
+    }
+
+    const result = await issuePasswordResetForUser(user);
+    if (!result.ok) {
+      return res.status(429).json({ message: `Please wait ${result.cooldownSeconds}s before requesting another reset email.` });
+    }
+
+    return res.json({ message: genericMessage });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to process password reset request", error: error.message });
+  }
+});
+
+router.post("/password/request-change", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const result = await issuePasswordResetForUser(user);
+    if (!result.ok) {
+      return res.status(429).json({ message: `Please wait ${result.cooldownSeconds}s before requesting another change-password email.` });
+    }
+
+    return res.json({ message: "We sent a password change link to your email. The link expires in 30 minutes." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to start password change", error: error.message });
+  }
+});
+
+router.post("/password/confirm-reset", async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: "Reset token and new password are required" });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpiresAt: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "This reset link is invalid or has expired." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    user.passwordResetToken = null;
+    user.passwordResetExpiresAt = null;
+    user.passwordResetRequestedAt = null;
+    await user.save();
+
+    await RefreshToken.deleteMany({ userId: user._id });
+    emailService.sendPasswordChangedEmail(user.email, user.firstName)
+      .catch(err => console.error("Failed to send password change confirmation email:", err.message));
+
+    return res.json({ message: "Password reset successful. Please sign in with your new password." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to reset password", error: error.message });
   }
 });
 

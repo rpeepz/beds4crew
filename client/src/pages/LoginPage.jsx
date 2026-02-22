@@ -84,6 +84,16 @@ export default function LoginPage() {
             onChange={handleChange}
             disabled={loading}
           />
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
+            <Button
+              variant="text"
+              onClick={() => navigate("/forgot-password")}
+              sx={{ textTransform: "none", p: 0, minWidth: "auto" }}
+            >
+              Forgot password?
+            </Button>
+          </Box>
           
           {error && (
             <Typography color="error" variant="body2" sx={{ mt: 2 }}>

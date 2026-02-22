@@ -106,7 +106,24 @@ const emailTemplates = {
         <p style="color: #666; margin-top: 30px;">
           If you didn't request a password reset, please ignore this email or contact support if you have concerns.
         </p>
-        <p style="color: #666;">This link will expire in 1 hour.</p>
+        <p style="color: #666;">This link will expire in 30 minutes.</p>
+      </div>
+    `,
+  }),
+
+  passwordChanged: (firstName) => ({
+    subject: "Your Password Was Changed",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #1976d2;">Password Updated</h1>
+        <p>Hi ${firstName},</p>
+        <p>Your Beds4Crew password was changed successfully.</p>
+        <p style="color: #666; margin-top: 20px;">
+          If you made this change, no further action is needed.
+        </p>
+        <p style="color: #666;">
+          If you did not change your password, please reset it immediately and contact support.
+        </p>
       </div>
     `,
   }),
@@ -218,6 +235,11 @@ const emailService = {
 
   sendPasswordResetEmail: async (email, firstName, resetToken) => {
     const template = emailTemplates.passwordReset(firstName, resetToken);
+    return sendEmail({ to: email, ...template });
+  },
+
+  sendPasswordChangedEmail: async (email, firstName) => {
+    const template = emailTemplates.passwordChanged(firstName);
     return sendEmail({ to: email, ...template });
   },
 

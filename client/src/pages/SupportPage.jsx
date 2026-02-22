@@ -112,17 +112,48 @@ export default function SupportPage() {
     window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
   };
 
+  const scrollToFaq = (slug) => {
+    const el = document.getElementById(`faq-${slug}`);
+    if (!el) return;
+
+    const top = window.scrollY + el.getBoundingClientRect().top - getScrollOffset();
+    window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+  };
+
   useEffect(() => {
     const hashSlug = decodeURIComponent(location.hash.replace("#", ""));
     if (!hashSlug) return;
 
-    const exists = allTopics.some((topic) => topic.slug === hashSlug);
-    if (!exists) return;
+    if (hashSlug.startsWith("faq-")) {
+      const faqSlug = hashSlug.replace("faq-", "");
+      const faqExists = supportFaqs.some((faq) => faq.slug === faqSlug);
+      if (!faqExists) return;
 
-    setExpandedTopic(hashSlug);
-    requestAnimationFrame(() => {
-      scrollToTopic(hashSlug);
-    });
+      setFaqSectionOpen(true);
+      setExpandedFaq(faqSlug);
+      requestAnimationFrame(() => {
+        scrollToFaq(faqSlug);
+      });
+      return;
+    }
+
+    const exists = allTopics.some((topic) => topic.slug === hashSlug);
+    if (exists) {
+      setExpandedTopic(hashSlug);
+      requestAnimationFrame(() => {
+        scrollToTopic(hashSlug);
+      });
+      return;
+    }
+
+    const faqExists = supportFaqs.some((faq) => faq.slug === hashSlug);
+    if (faqExists) {
+      setFaqSectionOpen(true);
+      setExpandedFaq(hashSlug);
+      requestAnimationFrame(() => {
+        scrollToFaq(hashSlug);
+      });
+    }
   }, [location.hash, allTopics]);
 
   const handleTopicSelect = (slug) => {
@@ -173,6 +204,7 @@ export default function SupportPage() {
                 {supportFaqs.map((faq) => (
                   <Accordion
                     key={faq.slug}
+                    id={`faq-${faq.slug}`}
                     expanded={expandedFaq === faq.slug}
                     onChange={(_, isExpanded) => setExpandedFaq(isExpanded ? faq.slug : null)}
                     disableGutters
@@ -271,11 +303,13 @@ export default function SupportPage() {
                                 {topic.resourceLink.label}
                               </Link>
                             )}
-                            <Box>
-                              <Button size="small" variant="contained" onClick={handleCallSupport}>
-                                Chat with Support
-                              </Button>
-                            </Box>
+                            {topic.slug !== "password-reset" && (
+                              <Box>
+                                <Button size="small" variant="contained" onClick={handleCallSupport}>
+                                  Chat with Support
+                                </Button>
+                              </Box>
+                            )}
                           </Collapse>
                         ) : (
                           <>

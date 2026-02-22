@@ -44,6 +44,12 @@
         "resourceLink": { "label": "Help center articles", "href": "/help-center" }
       },
       {
+        "title": "Password Help",
+        "slug": "password-reset",
+        "description": "Reset or change your password.",
+        "resourceLink": { "label": "Read password FAQ", "href": "/support#faq-password-reset" }
+      },
+      {
         "title": "Safety",
         "slug": "safety",
         "description": "Safety guidelines for guests and hosts.",
