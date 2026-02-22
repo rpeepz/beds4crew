@@ -664,7 +664,7 @@ export default function ProfilePage() {
                 onClick={handleSyncSubscription}
                 disabled={billingLoading}
               >
-                {billingLoading ? "Syncing..." : "Sync with Stripe"}
+                {billingLoading ? "Syncing..." : "Sync Subscription"}
               </Button>
             </Box>
           </Card>

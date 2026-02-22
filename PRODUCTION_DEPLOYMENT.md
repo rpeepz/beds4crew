@@ -186,14 +186,14 @@ If issues occur:
 1. Check Stripe webhook delivery logs
 2. Verify endpoint is accessible
 3. Check webhook secret is correct
-4. Users can use "Sync with Stripe" button as workaround
+4. Users can use "Sync Subscription" button as workaround
 5. Fix issue and manually sync affected users
 
 ## 📞 Support Contacts
 
 - **Stripe Support**: https://support.stripe.com
 - **Webhook Issues**: Check Stripe Dashboard → Webhooks → Recent deliveries
-- **Manual Sync**: Users can click "Sync with Stripe" in Profile
+- **Manual Sync**: Users can click "Sync Subscription" in Profile
 
 ## ✨ Production-Ready Features
 

@@ -8,7 +8,7 @@ If you've paid on Stripe but your database isn't reflecting the subscription sta
 
 1. Log into your test account
 2. Go to Profile page → Host Status tab
-3. Click **"Sync with Stripe"** button
+3. Click **"Sync Subscription"** button
 4. This will fetch your subscription directly from Stripe and update the database
 
 ## Common Issues & Solutions
@@ -153,7 +153,7 @@ If you see errors, they'll be logged with ❌.
 
 ### Test Manual Sync
 
-1. Click "Sync with Stripe" button in Profile
+1. Click "Sync Subscription" button in Profile
 2. Watch for success message
 3. Page should update with correct subscription status
 
@@ -239,7 +239,7 @@ curl -X POST \
 
 1. **Check server logs** - Look for ❌ error messages
 2. **Check Stripe Dashboard** - View webhook delivery attempts
-3. **Use manual sync** - Click "Sync with Stripe" button
+3. **Use manual sync** - Click "Sync Subscription" button
 4. **Verify environment variables** - All three Stripe variables must be set
 5. **Restart server** - After any .env changes
 6. **Use Stripe CLI** - For local development testing
