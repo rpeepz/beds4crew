@@ -16,8 +16,6 @@ import {
   Menu,
   MenuItem,
   Avatar,
-  Popover,
-  Grid,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -44,7 +42,6 @@ import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../components/AppSnackbar";
 import { logout, fetchWithAuth, API_URL } from "../utils/api";
 import { useThemeMode } from "../contexts/ThemeContext";
-import GlobalSearchBar from "./GlobalSearchBar";
 import SiteFooter from "./SiteFooter";
 
 const drawerWidth = 280;
@@ -55,7 +52,6 @@ const categories = [
   { value: "hostel", label: "Hostels" },
   { value: "flat", label: "Flats" },
   { value: "villa", label: "Villas" },
-  { value: "shared", label: "Shared Beds" },
 ];
 
 function isEmpty(obj) {
@@ -145,13 +141,6 @@ export default function NavigationDrawer({ children }) {
 
   const handleBackdropClick = () => {
     setOpen(false);
-  };
-
-  const handleSearchSubmit = ({ query, category }) => {
-    const params = new URLSearchParams();
-    if (query) params.set("query", query);
-    if (category) params.set("category", category);
-    navigate(`/properties${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const handleAccountMenu = (event) => {
@@ -278,19 +267,19 @@ export default function NavigationDrawer({ children }) {
               <MenuIcon />
             </Badge>
           </IconButton>
+            <Box sx={{ display: "flex", alignItems: "baseline", flexDirection: { xs: "column", sm: "row" }, gap: 1 }}>
           <Typography
             variant="h6"
             component="div"
             sx={{ fontWeight: 800, cursor: "pointer" }}
             onClick={handleTitleClick}
-          >
+            >
             Beds4Crew
           </Typography>
-          {isDesktop && (
-            <Box sx={{ flex: 1, maxWidth: 720 }}>
-              <GlobalSearchBar onSubmit={handleSearchSubmit} />
+              <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/properties")}>Explore</Button>
+              <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/browse")}>Search by Date</Button>
             </Box>
-          )}
+            
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
             <Button
               variant="contained"
@@ -337,19 +326,6 @@ export default function NavigationDrawer({ children }) {
             </IconButton>
           </Box>
         </Toolbar>
-        <Box sx={{ borderTop: 1, borderColor: "divider", backgroundColor: "background.paper" }}>
-          <Box sx={{ maxWidth: 1200, mx: "auto", px: { xs: 1, sm: 2 }, display: "flex", alignItems: "center", gap: 2, py: 1, flexWrap: "wrap" }}>
-            <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/")}>Home</Button>
-            <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/properties")}>Explore</Button>
-            <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/browse")}>Map</Button>
-            {/* <Button variant="text" sx={{ fontWeight: 600 }} onClick={() => navigate("/support")}>Support</Button> */}
-            {!isDesktop && (
-              <Box sx={{ flex: 1, minWidth: 240 }}>
-                <GlobalSearchBar size="small" onSubmit={handleSearchSubmit} />
-              </Box>
-            )}
-          </Box>
-        </Box>
       </AppBar>
 
       <Menu anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={closeAccountMenu}>

@@ -80,7 +80,7 @@ export function NoWishlist() {
       icon={FavoriteBorderIcon}
       title="Your wishlist is empty"
       description="Start adding properties you love to keep track of them for future bookings."
-      actionLabel="Browse Properties"
+      actionLabel="Explore Properties"
       actionHref="/properties"
     />
   );
@@ -91,8 +91,8 @@ export function NoTrips() {
     <EmptyState
       icon={EventBusyIcon}
       title="No trips found"
-      description="You haven't booked any properties yet. Explore our listings to plan your next adventure."
-      actionLabel="Browse Properties"
+      description="You haven't booked any beds yet. Explore our listings to plan your next adventure."
+      actionLabel="Explore Properties"
       actionHref="/properties"
     />
   );

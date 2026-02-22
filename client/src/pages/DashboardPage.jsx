@@ -24,7 +24,6 @@ const categoryTiles = [
   { label: "Hostels", value: "hostel" },
   { label: "Flats", value: "flat" },
   { label: "Villas", value: "villa" },
-  { label: "Shared Beds", value: "shared" },
 ];
 
 const popularSearches = [

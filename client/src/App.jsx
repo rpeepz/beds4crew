@@ -102,8 +102,8 @@ function App() {
                 <Route path="/browse" element={<BrowsePage />} />
                 <Route path="/property/:id" element={<PropertyDetailPage />} />
                 <Route path="/trips" element={<ProtectedRoute requiredRole="guest"> <TripListPage /> </ProtectedRoute>} />
-                <Route path="/my-listings" element={<ProtectedRoute> <HostListingsPage /> </ProtectedRoute>} />
-                <Route path="/reservations" element={<ProtectedRoute> <ReservationListPage /> </ProtectedRoute>} />
+                <Route path="/my-listings" element={<ProtectedRoute requiredRole="host"> <HostListingsPage /> </ProtectedRoute>} />
+                <Route path="/reservations" element={<ProtectedRoute requiredRole="host"> <ReservationListPage /> </ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute> <ProfilePage /> </ProtectedRoute>} />
                 <Route path="/wishlist" element={<ProtectedRoute> <WishListPage /> </ProtectedRoute>} />
                 <Route path="/support" element={<SupportPage />} />

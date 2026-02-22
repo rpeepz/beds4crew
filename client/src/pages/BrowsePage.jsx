@@ -23,10 +23,16 @@ import {
   Switch,
   ToggleButton,
   ToggleButtonGroup,
+  Autocomplete,
+  Collapse,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ClearIcon from '@mui/icons-material/Clear';
+
+import { commonStyles } from "../utils/styleConstants";
 import MapView from '../components/HotelMapView';
 import { useSnackbar } from '../components/AppSnackbar';
 import { fetchWithAuth, formatPriceDisplay, API_URL } from '../utils/api';
@@ -68,11 +74,17 @@ export default function BrowsePage() {
   const [showControls, setShowControls] = useState(true);
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [gridColumns, setGridColumns] = useState(3);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [locationInput, setLocationInput] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
   const snackbar = useSnackbar();
   const gridOptions = [10, 5, 3, 2, 1];
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const mapSectionRef = useRef(null);
+  const resultsListRef = useRef(null);
 
   // Fetch user's wishlist
   useEffect(() => {
@@ -83,21 +95,32 @@ export default function BrowsePage() {
       .catch(err => console.error('Failed to fetch wishlist:', err));
   }, [user.id]);
 
-  // Fetch all properties from DB
+  // No initial load - properties are only loaded via date search
   useEffect(() => {
-    setLoading(true);
-    fetch(`${API_URL}/properties`)
-      .then(res => res.json())
-      .then(data => {
-        const activeProps = data.filter(p => p.isActive !== false);
-        setAllProperties(activeProps);
-      })
-      .catch(err => {
-        console.error('Failed to fetch properties:', err);
-        snackbar('Failed to load properties', 'error');
-      })
-      .finally(() => setLoading(false));
-  }, [snackbar]);
+    setLoading(false);
+  }, []);
+
+  // Restore saved search state if returning from property details
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('browseSearchState');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.startDate) setStartDate(dayjs(state.startDate));
+        if (state.endDate) setEndDate(dayjs(state.endDate));
+        if (state.center) setCenter(state.center);
+        if (state.radius) setRadius(state.radius);
+        if (state.properties) setAllProperties(state.properties);
+        if (state.sortBy) setSortBy(state.sortBy);
+        if (state.gridColumns) setGridColumns(state.gridColumns);
+        if (state.locationInput) setLocationInput(state.locationInput);
+        // Clear the saved state after restoring
+        sessionStorage.removeItem('browseSearchState');
+      } catch (err) {
+        console.error('Failed to restore search state:', err);
+      }
+    }
+  }, []);
 
   // Calculate distance in miles between two lat/lng points using Haversine formula
   const calculateDistance = useCallback((lat1, lng1, lat2, lng2) => {
@@ -193,14 +216,25 @@ export default function BrowsePage() {
     return sortedProperties.slice(start, start + RESULTS_PER_PAGE);
   }, [sortedProperties, currentPage]);
 
-  const sideResults = useMemo(() => paginatedProperties.slice(0, 2), [paginatedProperties]);
-  const listResults = useMemo(() => paginatedProperties.slice(2), [paginatedProperties]);
-
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(1);
     }
   }, [currentPage, totalPages]);
+
+  const saveSearchState = () => {
+    const state = {
+      startDate: startDate?.format('YYYY-MM-DD'),
+      endDate: endDate?.format('YYYY-MM-DD'),
+      center,
+      radius,
+      properties: allProperties,
+      sortBy,
+      gridColumns,
+      locationInput,
+    };
+    sessionStorage.setItem('browseSearchState', JSON.stringify(state));
+  };
 
   const handleResultFocus = (property) => {
     if (!showMap) {
@@ -224,16 +258,16 @@ export default function BrowsePage() {
   };
 
   const renderResultCard = (prop) => (
-    <Card key={prop._id} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Card 
+      key={prop._id} 
+      sx={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer' }}
+      onClick={() => handleResultFocus(prop)}
+    >
       <CardMedia
         component="img"
         height="180"
         image={formatImageUrl(prop.images?.[0]?.path || prop.images?.[0]) || 'https://picsum.photos/300/180?random=1'}
         alt={prop.title}
-        sx={{ cursor: 'pointer' }}
-        onClick={() => {
-          handleResultFocus(prop);
-        }}
       />
             <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 1.2 }}>
       <Box display="flex" flexWrap="wrap" alignItems="center" gap={2}>
@@ -262,8 +296,13 @@ export default function BrowsePage() {
           {prop.address}
         </Typography>
         <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
-          {formatPriceDisplay(prop)}
+          {prop.lowestPrice ? `$${prop.lowestPrice}/night` : formatPriceDisplay(prop)}
         </Typography>
+        {prop.availableBeds !== undefined && (
+          <Typography variant="body2" color="primary.main" sx={{ mt: 0.5, fontWeight: 600 }}>
+            {prop.availableBeds} {prop.availableBeds === 1 ? 'bed' : 'beds'} available
+          </Typography>
+        )}
         <Typography variant="caption" color="textSecondary">
           {prop.category} • {prop.type}
         </Typography>
@@ -276,14 +315,21 @@ export default function BrowsePage() {
       <CardActions sx={{ pt: 0 }}>
         <Button
           size="small"
-          onClick={() => navigate(`/property/${prop._id}`)}
+          onClick={(e) => {
+            e.stopPropagation();
+            saveSearchState();
+            navigate(`/property/${prop._id}`);
+          }}
         >
           View Details
         </Button>
         <Tooltip title={wishlist.includes(prop._id) ? 'Remove from wishlist' : 'Add to wishlist'}>
           <IconButton
             size="small"
-            onClick={() => handleToggleWishlist(prop._id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleWishlist(prop._id);
+            }}
             color={wishlist.includes(prop._id) ? 'error' : 'default'}
             aria-label={wishlist.includes(prop._id) ? 'Remove from wishlist' : 'Add to wishlist'}
           >
@@ -330,6 +376,100 @@ export default function BrowsePage() {
     }
   };
 
+  // Debounced location search for autocomplete
+  useEffect(() => {
+    if (!locationInput || locationInput.length < 3) {
+      setLocationOptions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setGeocoding(true);
+      try {
+        const res = await fetch(`${API_URL}/geocoding/search?q=${encodeURIComponent(locationInput)}`);
+        const data = await res.json();
+        if (data.lat && data.lon) {
+          setLocationOptions([{
+            label: data.display_name || locationInput,
+            lat: parseFloat(data.lat),
+            lng: parseFloat(data.lon)
+          }]);
+        }
+      } catch (err) {
+        console.error('Geocoding error:', err);
+      } finally {
+        setGeocoding(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [locationInput]);
+
+  // Search by date range
+  const handleDateSearch = async () => {
+    if (!startDate || !endDate) {
+      snackbar('Please select both start and end dates', 'warning');
+      return;
+    }
+
+    if (endDate.isBefore(startDate)) {
+      snackbar('End date must be after start date', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        lat: center.lat.toString(),
+        lng: center.lng.toString(),
+        startDate: startDate.format('YYYY-MM-DD'),
+        endDate: endDate.format('YYYY-MM-DD'),
+        radius: radius.toString(),
+        minPrice: '0',
+        maxPrice: '10000',
+        minBeds: '1',
+      });
+
+      const res = await fetch(`${API_URL}/properties/date-finder?${params.toString()}`);
+      const data = await res.json();
+      
+      if (res.ok) {
+        setAllProperties(data.properties || []);
+        setCurrentPage(1);
+        
+        // Select first property and scroll to results
+        if (data.properties.length > 0) {
+          setSelectedPropertyId(data.properties[0]._id);
+          setTimeout(() => {
+            const headerEl = document.querySelector('header, .MuiAppBar-root');
+            const headerOffset = headerEl?.getBoundingClientRect().height || 0;
+            const resultsEl = resultsListRef.current;
+            if (resultsEl) {
+              const resultsTop = resultsEl.getBoundingClientRect().top + window.scrollY;
+              window.scrollTo({
+                top: Math.max(resultsTop - headerOffset - 20, 0),
+                behavior: 'smooth',
+              });
+            }
+          }, 100);
+        }
+        
+        if (data.properties.length === 0) {
+          snackbar('No available properties found for those dates', 'info');
+        } else {
+          snackbar(`Found ${data.properties.length} available propert${data.properties.length === 1 ? 'y' : 'ies'}`, 'success');
+        }
+      } else {
+        snackbar(data.message || 'Search failed', 'error');
+      }
+    } catch (err) {
+      console.error('Date search error:', err);
+      snackbar('Failed to search by dates', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResetFilters = () => {
     setCenter(DEFAULT_LOCATION);
     setRadius(DEFAULT_RADIUS_MILES);
@@ -337,6 +477,18 @@ export default function BrowsePage() {
     setShowCustomSearch(false);
     setSortBy('recommended');
     setCurrentPage(1);
+    setStartDate(null);
+    setEndDate(null);
+    setLocationInput('');
+    // Reload all properties
+    setLoading(true);
+    fetch(`${API_URL}/properties`)
+      .then(res => res.json())
+      .then(data => {
+        const activeProps = data.filter(p => p.isActive !== false);
+        setAllProperties(activeProps);
+      })
+      .finally(() => setLoading(false));
   };
 
   const handleToggleWishlist = async (propertyId) => {
@@ -377,41 +529,90 @@ export default function BrowsePage() {
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 2 }}>
         <Box>
-          <Typography variant="h4" mb={0.5}>
-            Browse Properties
+          <Typography variant="h4" sx={commonStyles.pageTitle}>
+            Search Beds By Date
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Search by location, adjust radius, and refine results.
           </Typography>
         </Box>
       </Box>
-      <FormControlLabel
+      {/* <FormControlLabel
         control={<Switch checked={showMap} onChange={(e) => setShowMap(e.target.checked)} />}
         label={showMap ? 'Map' : 'Map off'}
       />
       <FormControlLabel
         control={<Switch checked={showControls} onChange={(e) => setShowControls(e.target.checked)} />}
         label={showControls ? 'Controls' : 'Controls off'}
-      />
+      /> */}
 
       {/* Controls Section */}
       {showControls && (
         <Card sx={{ p: 2, mb: 3 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-            <TextField
-              select
-              label="Quick Select Location"
-              value={selectedLocation}
-              onChange={handleLocationChange}
+          {/* Date Search Section */}
+          <Box sx={{ mb: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+              Search Available Properties by Date
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2 }}>
+              <DatePicker
+                label="Check-in Date"
+                value={startDate}
+                onChange={(newValue) => setStartDate(newValue)}
+                minDate={dayjs()}
+                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+              />
+              <DatePicker
+                label="Check-out Date"
+                value={endDate}
+                onChange={(newValue) => setEndDate(newValue)}
+                minDate={startDate || dayjs()}
+                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+              />
+            </Box>
+            <Button
+              variant="contained"
               fullWidth
-              helperText="Choose a popular city"
+              onClick={handleDateSearch}
+              disabled={!startDate || !endDate || loading}
             >
-              {POPULAR_LOCATIONS.map(loc => (
-                <MenuItem key={loc.label} value={loc.label}>
-                  {loc.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              {loading ? 'Searching...' : 'Search Available Properties'}
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+            {/* Location Search with Autocomplete */}
+            <Autocomplete
+              freeSolo
+              options={[...POPULAR_LOCATIONS, ...locationOptions]}
+              getOptionLabel={(option) => typeof option === 'string' ? option : option.label}
+              inputValue={locationInput}
+              onInputChange={(e, value) => setLocationInput(value)}
+              onChange={(e, value) => {
+                if (value && typeof value === 'object') {
+                  setCenter({ lat: value.lat, lng: value.lng });
+                  setCurrentPage(1);
+                }
+              }}
+              loading={geocoding}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Search Location"
+                  placeholder="City or ZIP code"
+                  helperText="Type to search cities or ZIP codes"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {geocoding ? <CircularProgress size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
 
             <Box>
               <Typography variant="body2" gutterBottom>
@@ -448,23 +649,26 @@ export default function BrowsePage() {
 
             
           </Box>
-          {/* Custom Location Search Toggle */}
-          <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: { xs: 'flex-start', md: 'center' } }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={showCustomSearch}
-                  onChange={(e) => setShowCustomSearch(e.target.checked)}
-                />
-              }
-              label="Search by address or landmark"
-            />
-            <Button variant="text" onClick={handleResetFilters}>Reset filters</Button>
-          </Box>
-          <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {/* Stats */}
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
             <Chip label={`${allPropertiesForList.length} total`} variant="outlined" />
             <Chip label={`${filteredPropertiesWithCoords.length} within ${radius} miles`} variant="outlined" />
-            {selectedLocation && <Chip label={`Centered on ${selectedLocation}`} />}
+            {startDate && endDate && (
+              <Chip 
+                label={`${startDate.format('MMM D')} - ${endDate.format('MMM D')}`} 
+                color="primary"
+                onDelete={() => {
+                  setStartDate(null);
+                  setEndDate(null);
+                  handleResetFilters();
+                }}
+              />
+            )}
+            <Box sx={{ ml: 'auto' }}>
+              <Button size="small" variant="outlined" onClick={handleResetFilters}>
+                Reset All
+              </Button>
+            </Box>
           </Box>
           <Typography variant="body2" sx={{ mt: 1 }}>
             {loading ? (
@@ -472,97 +676,49 @@ export default function BrowsePage() {
             ) : (
               <>
                 {sortedProperties.length} results
-                <br />
-                <Typography variant="caption" component="span">
-                  ({filteredPropertiesWithCoords.length} within {radius} miles)
-                </Typography>
+                {startDate && endDate && <Typography variant="caption" component="span" sx={{ ml: 1, color: 'primary.main' }}>(showing available properties for selected dates)</Typography>}
               </>
             )}
           </Typography>
 
-        
-
-          {/* Custom Location Search Input */}
-          {showCustomSearch && (
-            <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'flex-start', width: '100%' }}>
-              <TextField
-                placeholder="Search address / city / landmark"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCustomLocationSearch();
-                  }
-                }}
-                variant="outlined"
-                size="small"
-                fullWidth
-                inputProps={{ 'aria-label': 'Search address, city, or landmark' }}
-                InputProps={{
-                  endAdornment: searchQuery && (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setSearchQuery('')}
-                        edge="end"
-                        size="small"
-                        aria-label="Clear search input"
-                      >
-                        <ClearIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <Button
-                variant="contained"
-                onClick={handleCustomLocationSearch}
-                disabled={searchLoading}
-                sx={{ minWidth: 100, flexShrink: 0 }}
-              >
-                {searchLoading ? 'Searching...' : 'Search'}
-              </Button>
-            </Box>
-          )}
         </Card>
       )}
 
       {/* Map Section */}
       {showMap && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 360px' }, gap: 2, mb: 3 }}>
-          <Card ref={mapSectionRef} sx={{ height: { md: 520 }, overflow: 'hidden' }}>
-            {loading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                <CircularProgress />
-              </Box>
-            ) : filteredPropertiesWithCoords.length > 0 ? (
-              <MapView
-                properties={filteredPropertiesWithCoords}
-                groupedMarkers={groupedMarkers}
-                center={center}
-                radius={radius}
-                selectedPropertyId={selectedPropertyId}
-                onPropertyClick={(id) => navigate(`/property/${id}`)}
-              />
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', p: 3 }}>
-                <Typography color="text.secondary" textAlign="center">
-                  No properties found within {radius} miles.
-                  <br />
-                  <Typography variant="caption" component="span">
-                    Try increasing the search radius or selecting a different location.
-                  </Typography>
+        <Card ref={mapSectionRef} sx={{ height: 'auto', overflow: 'hidden', mb: 3 }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredPropertiesWithCoords.length > 0 ? (
+            <MapView
+              properties={filteredPropertiesWithCoords}
+              groupedMarkers={groupedMarkers}
+              center={center}
+              radius={radius}
+              selectedPropertyId={selectedPropertyId}
+              onPropertyClick={(id) => {
+                saveSearchState();
+                navigate(`/property/${id}`);
+              }}
+            />
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', p: 3 }}>
+              <Typography color="text.secondary" textAlign="center">
+                No properties found within {radius} miles.
+                <br />
+                <Typography variant="caption" component="span">
+                  Try increasing the search radius or selecting a different location.
                 </Typography>
-              </Box>
-            )}
-          </Card>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {sideResults.map((prop) => renderResultCard(prop))}
-          </Box>
-        </Box>
+              </Typography>
+            </Box>
+          )}
+        </Card>
       )}
 
       {/* Results List Section */}
-      <Box>
+      <Box ref={resultsListRef}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 2 }}>
           <Typography variant="h6">
             Results ({sortedProperties.length})
@@ -604,7 +760,7 @@ export default function BrowsePage() {
                 mb: 3,
               })}
             >
-              {(showMap ? listResults : paginatedProperties).map((prop) => (
+              {paginatedProperties.map((prop) => (
                 <Box
                   key={prop._id}
                   sx={(theme) => ({

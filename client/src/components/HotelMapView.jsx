@@ -85,7 +85,9 @@ export default function MapView({
   height = "500px",
 }) {
   const [expandedCluster, setExpandedCluster] = useState(null);
+  const [mapActive, setMapActive] = useState(false);
   const markerRefs = useRef({});
+  const mapRef = useRef(null);
 
   const markerKeyByPropertyId = useMemo(() => {
     const map = {};
@@ -188,15 +190,121 @@ export default function MapView({
   const mapCenter = [center.lat, center.lng];
   const radiusMeters = radius * 1609.34; // Convert miles to meters
 
+  const handleRecenter = () => {
+    if (mapRef.current) {
+      mapRef.current.flyTo(mapCenter, 10, { duration: 1.5 });
+    }
+  };
+
+  const handleActivateMap = () => {
+    setMapActive(true);
+    if (mapRef.current) {
+      mapRef.current.scrollWheelZoom.enable();
+      mapRef.current.dragging.enable();
+    }
+  };
+
+  const handleDeactivateMap = () => {
+    setMapActive(false);
+    if (mapRef.current) {
+      mapRef.current.scrollWheelZoom.disable();
+      mapRef.current.dragging.disable();
+    }
+  };
+
   return (
-    <MapContainer
-      center={mapCenter}
-      zoom={10}
-      minZoom={5}
-      maxZoom={14}
-      scrollWheelZoom={true}
-      style={{ width: '100%', height, minHeight: height, zIndex: 0 }}
-    >
+    <Box sx={{ position: 'relative', width: '100%', height }}>
+      {!mapActive && (
+        <Box
+          onClick={handleActivateMap}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1000,
+            bgcolor: 'rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            backdropFilter: 'blur(2px)',
+          }}
+        >
+          <Box
+            sx={{
+              bgcolor: 'white',
+              p: 3,
+              borderRadius: 2,
+              boxShadow: 3,
+              textAlign: 'center',
+              maxWidth: '280px',
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+              Tap to explore map
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Click here to enable map interaction
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
+      {mapActive && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
+        >
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleRecenter}
+            sx={{
+              minWidth: 'auto',
+              bgcolor: 'white',
+              color: 'text.primary',
+              boxShadow: 2,
+              '&:hover': { bgcolor: 'grey.100' },
+            }}
+          >
+            🎯 Recenter
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleDeactivateMap}
+            sx={{
+              minWidth: 'auto',
+              bgcolor: 'white',
+              color: 'text.primary',
+              boxShadow: 2,
+              '&:hover': { bgcolor: 'grey.100' },
+            }}
+          >
+            🔒 Lock Map
+          </Button>
+        </Box>
+      )}
+
+      <MapContainer
+        ref={mapRef}
+        center={mapCenter}
+        zoom={10}
+        minZoom={5}
+        maxZoom={14}
+        scrollWheelZoom={false}
+        dragging={false}
+        style={{ width: '100%', height, minHeight: height, zIndex: 0 }}
+      >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -338,5 +446,6 @@ export default function MapView({
         <Box />
       )}
     </MapContainer>
+    </Box>
   );
 }

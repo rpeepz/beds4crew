@@ -136,6 +136,183 @@ router.get("/mine", verifyToken, async (req, res) => {
   }
 });
 
+// Date Finder - Search for properties with available beds in a date range
+// IMPORTANT: This must come BEFORE /:id route to avoid matching "date-finder" as an ID
+router.get("/date-finder", async (req, res) => {
+  try {
+    const { lat, lng, startDate, endDate, radius, minPrice, maxPrice, minBeds } = req.query;
+    
+    // console.log('🔍 Date Finder API called with params:', req.query);
+    
+    // Validate required params
+    if (!lat || !lng || !startDate || !endDate) {
+      return res.status(400).json({ message: "Missing required parameters: lat, lng, startDate, endDate" });
+    }
+    
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    const radiusMiles = parseFloat(radius) || 25;
+    const minPriceNum = parseFloat(minPrice) || 0;
+    const maxPriceNum = parseFloat(maxPrice) || Number.MAX_SAFE_INTEGER;
+    const minBedsNum = parseInt(minBeds) || 1;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // console.log('🔍 Parsed params:', { latitude, longitude, radiusMiles, minPriceNum, maxPriceNum, minBedsNum, start, end });
+    
+    if (end <= start) {
+      return res.status(400).json({ message: "End date must be after start date" });
+    }
+    
+    // Get all active properties
+    const allProperties = await Property.find({ 
+      isActive: true,
+      latitude: { $exists: true, $ne: null },
+      longitude: { $exists: true, $ne: null }
+    })
+    .populate("ownerHost", "firstName lastName hasPaid")
+    .lean();
+    
+    // console.log(`🔍 Found ${allProperties.length} active properties with coordinates`);
+    
+    // Filter properties by location (radius in miles)
+    const EARTH_RADIUS_MILES = 3959;
+    const propertiesInRadius = allProperties.filter(prop => {
+      const latDiff = (prop.latitude - latitude) * Math.PI / 180;
+      const lngDiff = (prop.longitude - longitude) * Math.PI / 180;
+      const a = Math.sin(latDiff/2) * Math.sin(latDiff/2) +
+                Math.cos(latitude * Math.PI / 180) * Math.cos(prop.latitude * Math.PI / 180) *
+                Math.sin(lngDiff/2) * Math.sin(lngDiff/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = EARTH_RADIUS_MILES * c;
+      prop.distance = distance;
+      return distance <= radiusMiles;
+    });
+    
+    // console.log(`🔍 ${propertiesInRadius.length} properties within ${radiusMiles} mile radius`);
+    
+    // Check availability for each property
+    const Booking = require("../models/Booking");
+    const availableProperties = [];
+    
+    for (const property of propertiesInRadius) {
+      // console.log(`🔍 Checking property: ${property.title}`);
+      
+      // Skip if host hasn't paid
+      if (!property.ownerHost?.hasPaid) {
+        // console.log(`  ❌ Host hasn't paid`);
+        continue;
+      }
+      
+      // Get all confirmed bookings that overlap with the date range
+      const overlappingBookings = await Booking.find({
+        property: property._id,
+        status: "confirmed",
+        startDate: { $lte: end },
+        endDate: { $gte: start }
+      }).lean();
+      
+      // console.log(`  📅 ${overlappingBookings.length} overlapping bookings`);
+      
+      // Check blocked periods
+      const blockedPeriods = property.blockedPeriods || [];
+      const entirePropertyBlocked = blockedPeriods.some(period => {
+        return period.blockType === "entire" && 
+               new Date(period.startDate) <= end && 
+               new Date(period.endDate) >= start;
+      });
+      
+      if (entirePropertyBlocked) {
+        // console.log(`  ❌ Entire property is blocked`);
+        continue; // Skip this property
+      }
+      
+      // Count available beds
+      let availableBeds = 0;
+      let lowestPrice = Number.MAX_SAFE_INTEGER;
+      
+      property.rooms?.forEach((room, roomIndex) => {
+        room.beds?.forEach((bed, bedIndex) => {
+          // Check if bed is marked as available
+          if (!bed.isAvailable) {
+            return;
+          }
+          
+          // Check if bed is blocked
+          const bedBlocked = blockedPeriods.some(period => {
+            if (period.blockType === "bed" && 
+                period.roomIndex === roomIndex && 
+                period.bedIndex === bedIndex) {
+              return new Date(period.startDate) <= end && 
+                     new Date(period.endDate) >= start;
+            }
+            if (period.blockType === "room" && period.roomIndex === roomIndex) {
+              return new Date(period.startDate) <= end && 
+                     new Date(period.endDate) >= start;
+            }
+            return false;
+          });
+          
+          if (bedBlocked) {
+            return;
+          }
+          
+          // Check if bed is booked
+          const bedBooked = overlappingBookings.some(booking => {
+            return booking.bookedBeds?.some(bookedBed => 
+              bookedBed.roomIndex === roomIndex && bookedBed.bedIndex === bedIndex
+            );
+          });
+          
+          if (!bedBooked) {
+            availableBeds++;
+            if (bed.pricePerBed < lowestPrice) {
+              lowestPrice = bed.pricePerBed;
+            }
+          }
+        });
+      });
+      
+      // console.log(`  🛏️  Available beds: ${availableBeds}, Lowest price: $${lowestPrice}`);
+      
+      // Apply filters
+      if (availableBeds >= minBedsNum && 
+          lowestPrice >= minPriceNum && 
+          lowestPrice <= maxPriceNum) {
+        // console.log(`  ✅ Property passed all filters!`);
+        availableProperties.push({
+          ...property,
+          availableBeds,
+          lowestPrice
+        });
+      } else {
+        // console.log(`  ❌ Failed filters - minBeds: ${minBedsNum}, priceRange: $${minPriceNum}-$${maxPriceNum}`);
+      }
+    }
+    
+    // console.log(`🔍 Final result: ${availableProperties.length} available properties`);
+    
+    // Sort by distance
+    availableProperties.sort((a, b) => a.distance - b.distance);
+    
+    res.json({
+      properties: availableProperties,
+      searchParams: {
+        location: { lat: latitude, lng: longitude },
+        radius: radiusMiles,
+        startDate,
+        endDate,
+        priceRange: [minPriceNum, maxPriceNum],
+        minBeds: minBedsNum
+      }
+    });
+  } catch (error) {
+    console.error('Date finder error:', error);
+    res.status(500).json({ message: "Failed to search properties", error: error.message });
+  }
+});
+
 // Get property details with caching
 router.get("/:id", async (req, res) => {
   try {
