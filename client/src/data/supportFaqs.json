@@ -68,5 +68,21 @@
       "Review total price, cancellation terms, and house rules.",
       "Submit booking and watch for confirmation updates."
     ]
+  },
+  {
+    "slug": "deactivate-account",
+    "question": "What is the policy for deactivation vs deletion?",
+    "summary": "Deactivation disables access; reactivation opens after 30 days via email token. Delete Account is permanent.",
+    "status": "active",
+    "href": "/profile?tab=settings#danger-zone",
+    "answer": "Deactivation is available in Danger Zone and immediately disables account access. Reactivation can only be initiated after a 30-day hold period and requires a 30-minute secure email token confirmation. Delete Account remains a permanent removal action.",
+    "steps": [
+      "Open your Profile page.",
+      "Go to Account Settings.",
+      "Scroll down to Danger Zone.",
+      "Click Deactivate Account and confirm with your password.",
+      "Wait until the 30-day hold period ends, then request a reactivation email from the disabled account page.",
+      "Open the email link and confirm reactivation within 30 minutes."
+    ]
   }
 ]

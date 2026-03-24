@@ -98,7 +98,7 @@ export const SUPPORT_RESOURCE_CONTENT = {
     ],
     solutionLinks: [
       { label: "Browse Support", href: "/support" },
-      { label: "Chat With Support", href: "/support/chat?source=resource&slug=help-center&title=Help%20Center" },
+      { label: "Browse FAQs", href: "/support#faq" },
       { label: "Submit Support Ticket", action: "ticket", subject: "Help Center support request" }
     ]
   },
@@ -242,10 +242,12 @@ export const SUPPORT_RESOURCE_CONTENT = {
     overview: "Privacy information explains how data is processed and what controls users can request.",
     highlights: [
       "Data handling policies cover account, booking, and support information.",
+      "Deactivation disables access immediately; reactivation is available after 30 days using an email token.",
       "Users can submit privacy-related requests through defined channels.",
       "Policy updates are reflected in official privacy documentation."
     ],
     nextSteps: [
+      "If you are evaluating account removal, review the deactivation vs deletion policy first.",
       "Review policy sections relevant to your request.",
       "Collect account details needed for verification.",
       "Submit your privacy request through Contact."
@@ -285,6 +287,7 @@ export const SUPPORT_RESOURCE_CONTENT = {
         paragraphs: [
           "Users must provide accurate registration details and keep account information current.",
           "You are responsible for all activity under your account and for maintaining credential security.",
+          "Users can disable account access through Account Settings. Reactivation requires a secure email token and is only available after a 30-day hold period.",
           "We may request verification details to protect account integrity and platform safety."
         ]
       },

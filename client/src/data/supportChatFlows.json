@@ -142,11 +142,12 @@
         ]
       },
       "browse-topics": {
-        "message": "Open Support to browse FAQs and guided topics by category.",
-        "options": [
-          { "label": "Open support hub", "next": "resolved-support" },
-          { "label": "Still need an agent", "next": "escalate" }
-        ]
+        "message": "Open Support Hub - find general topics, chat to ask more general questions.",
+        "options": [],
+        "solutionLink": {
+          "label": "Open Support hub",
+          "href": "/support/chat"
+        }
       },
       "policy": {
         "message": "You can review Terms & Conditions directly and submit a clarification request if needed.",
@@ -198,6 +199,7 @@
         "message": "For account issues, we usually start with email verification and recent activity checks.",
         "options": [
           { "label": "Password or sign-in issue", "next": "account-password" },
+          { "label": "Deactivate account", "next": "account-deactivate" },
           { "label": "I need a human agent", "next": "escalate" }
         ]
       },
@@ -268,6 +270,30 @@
           "href": "/terms"
         }
       },
+      "account-deactivate": {
+        "message": "I can explain deactivation vs deletion and guide the reactivation timeline.",
+        "options": [
+          { "label": "Show policy details", "next": "resolved-deactivate" },
+          { "label": "Open account settings", "next": "escalate-B" },
+          { "label": "I want to talk to support", "next": "escalate" }
+        ]
+      },
+      "resolved-deactivate": {
+        "message": "Deactivation is available in Account Settings > Danger Zone and disables access immediately. Reactivation is available after a 30-day hold period and requires a secure email token that expires in 30 minutes. Delete Account is still permanent.",
+        "options": [
+          { "label": "Open deactivation FAQ", "next": "resolved-deactivate-faq" },
+          { "label": "I want support to handle this", "next": "escalate" },
+          { "label": "Account Settings", "next": "escalate-B" }
+        ]
+      },
+      "resolved-deactivate-faq": {
+        "message": "Open the FAQ below for step-by-step deactivation guidance.",
+        "options": [],
+        "solutionLink": {
+          "label": "Open deactivation FAQ",
+          "href": "/support#faq-deactivate-account"
+        }
+      },
       "escalate": {
         "message": "I can route this to a human support agent. Include details and what you already tried.",
         "options": [],
@@ -275,6 +301,14 @@
           "label": "Submit support ticket",
           "action": "ticket",
           "subject": "General support escalation"
+        }
+      },
+      "escalate-B": {
+        "message": "Click below to navigate to the Account Settings page where you can find the Deactivate Account option under the Danger Zone section.",
+        "options": [],
+        "solutionLink": {
+          "label": "Account Settings - Danger Zone",
+          "href": "/account-settings#danger-zone"
         }
       }
     }
