@@ -309,6 +309,7 @@ function App() {
                 <Route path="/trips" element={<ProtectedRoute requiredRole="guest"> <TripListPage /> </ProtectedRoute>} />
                 <Route path="/my-listings" element={<ProtectedRoute requiredRole="host"> <Navigate to="/profile?tab=listings#listings-tab" replace /> </ProtectedRoute>} />
                 <Route path="/favorites" element={<ProtectedRoute> <Navigate to="/profile?tab=favorites#favorites-tab" replace /> </ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute> <Navigate to="/profile?tab=settings#settings-tab" replace /> </ProtectedRoute>} />
                 <Route path="/reservations" element={<ProtectedRoute requiredRole="host"> <ReservationListPage /> </ProtectedRoute>} />
                 <Route path="/review/:token" element={<ProtectedRoute> <ReviewPage /> </ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute> <ProfilePage /> </ProtectedRoute>} />

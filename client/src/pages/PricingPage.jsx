@@ -10,7 +10,7 @@ import {
   Container,
   CircularProgress,
 } from "@mui/material";
-import { fetchWithAuth, API_URL } from "../utils/api";
+import { fetchWithAuth, API_URL, isAppTransportMode } from "../utils/api";
 
 const TIERS = [
   {
@@ -53,6 +53,12 @@ export default function PricingPage() {
   const [highlightCheckout, setHighlightCheckout] = useState(false);
   const checkoutCtaRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
+  // Detect if running inside iOS native app
+  const isIosNative = (() => {
+    if (!isAppTransportMode() || typeof window === "undefined") return false;
+    const getPlatform = window.Capacitor?.getPlatform;
+    return typeof getPlatform === "function" && getPlatform() === "ios";
+  })();
 
   useEffect(() => {
     return () => {
@@ -85,7 +91,13 @@ export default function PricingPage() {
     }, 1400);
   };
 
+  // disallow checkout in iOS native app
   const handleCheckout = async () => {
+    if (isIosNative) {
+      alert("Subscription checkout is not available inside the iOS app.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetchWithAuth(`${API_URL}/billing/checkout-tier`, {
@@ -194,7 +206,8 @@ export default function PricingPage() {
           variant="contained"
           size="large"
           onClick={handleCheckout}
-          disabled={loading}
+          // disable checkout button if loading or in iOS native app
+          disabled={loading || isIosNative}
           sx={{
             minWidth: 200,
             transition: "transform 0.2s ease, box-shadow 0.2s ease",
@@ -218,7 +231,7 @@ export default function PricingPage() {
               <CircularProgress size={20} sx={{ mr: 1 }} /> Processing...
             </>
           ) : (
-            "Continue to Payment"
+            isIosNative ? "Not available in iOS app" : "Continue to Payment"
           )}
         </Button>
       </Box>
@@ -233,7 +246,9 @@ export default function PricingPage() {
         }}
       >
         <Typography variant="body2" color="textSecondary">
-          💳 Secure checkout powered by Stripe. No charges until you confirm.
+          {isIosNative
+            ? "iOS app build does not initiate external subscription checkout."
+            : "💳 Secure checkout powered by Stripe. No charges until you confirm."}
         </Typography>
       </Box>
     </Container>
