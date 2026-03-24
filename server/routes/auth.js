@@ -25,8 +25,16 @@ const router = express.Router();
 
 const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 const PASSWORD_RESET_REQUEST_COOLDOWN_MS = 60 * 1000;
+const REACTIVATION_TOKEN_TTL_MS = 30 * 60 * 1000;
+const REACTIVATION_REQUEST_COOLDOWN_MS = 60 * 1000;
 
 const createPasswordResetToken = () => {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+  return { rawToken, hashedToken };
+};
+
+const createReactivationToken = () => {
   const rawToken = crypto.randomBytes(32).toString("hex");
   const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
   return { rawToken, hashedToken };
@@ -176,6 +184,9 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role: user.role,
         isAdmin: isAllowlistedAdmin(user),
+        isActive: user.isActive !== false,
+        accountDisabledAt: user.accountDisabledAt || null,
+        reactivationEligibleAt: user.reactivationEligibleAt || null,
         firstName: user.firstName,
         lastName: user.lastName,
         profileImagePath: user.profileImagePath,
@@ -361,6 +372,87 @@ router.post("/password/confirm-reset", async (req, res) => {
     return res.json({ message: "Password reset successful. Please sign in with your new password." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to reset password" });
+  }
+});
+
+router.post("/reactivation/request", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.isActive !== false) {
+      return res.status(400).json({ message: "Account is already active." });
+    }
+
+    const now = Date.now();
+    const eligibleAt = user.reactivationEligibleAt ? new Date(user.reactivationEligibleAt).getTime() : 0;
+    if (eligibleAt && now < eligibleAt) {
+      return res.status(429).json({
+        message: "Reactivation is not available yet. You can request reactivation after the 30-day hold period.",
+        reactivationEligibleAt: user.reactivationEligibleAt,
+      });
+    }
+
+    const lastRequestedAt = user.reactivationTokenRequestedAt ? new Date(user.reactivationTokenRequestedAt).getTime() : 0;
+    if (lastRequestedAt && now - lastRequestedAt < REACTIVATION_REQUEST_COOLDOWN_MS) {
+      const waitSeconds = Math.ceil((REACTIVATION_REQUEST_COOLDOWN_MS - (now - lastRequestedAt)) / 1000);
+      return res.status(429).json({ message: `Please wait ${waitSeconds}s before requesting another reactivation email.` });
+    }
+
+    const { rawToken, hashedToken } = createReactivationToken();
+    user.reactivationToken = hashedToken;
+    user.reactivationTokenExpiresAt = new Date(now + REACTIVATION_TOKEN_TTL_MS);
+    user.reactivationTokenRequestedAt = new Date(now);
+    await user.save();
+
+    await emailService.sendAccountReactivationEmail(user.email, user.firstName, rawToken);
+
+    return res.json({ message: "We sent a reactivation link to your email. The link expires in 30 minutes." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to start account reactivation" });
+  }
+});
+
+router.post("/reactivation/confirm", async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: "Reactivation token is required" });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      reactivationToken: hashedToken,
+      reactivationTokenExpiresAt: { $gt: new Date() },
+      isActive: false,
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "This reactivation link is invalid or has expired." });
+    }
+
+    if (user.reactivationEligibleAt && new Date(user.reactivationEligibleAt).getTime() > Date.now()) {
+      return res.status(429).json({
+        message: "Reactivation is not available yet. Your account is still in the 30-day hold period.",
+        reactivationEligibleAt: user.reactivationEligibleAt,
+      });
+    }
+
+    user.isActive = true;
+    user.lastReactivatedAt = new Date();
+    user.accountDisabledAt = null;
+    user.reactivationEligibleAt = null;
+    user.reactivationToken = null;
+    user.reactivationTokenExpiresAt = null;
+    user.reactivationTokenRequestedAt = null;
+    await user.save();
+
+    return res.json({ message: "Account reactivated successfully. You can now continue using your account." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to reactivate account" });
   }
 });
 

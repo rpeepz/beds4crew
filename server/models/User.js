@@ -52,6 +52,15 @@ const UserSchema = new mongoose.Schema(
     role: { type: String, enum: ["guest", "host"], default: "guest" },
     hasPaid: { type: Boolean, default: false }, // Flag for hosts who have paid
     isActive: { type: Boolean, default: true }, // User account status
+    accountDisabledAt: { type: Date, default: null },
+    reactivationEligibleAt: { type: Date, default: null },
+    reactivationToken: { type: String, default: null },
+    reactivationTokenExpiresAt: { type: Date, default: null },
+    reactivationTokenRequestedAt: { type: Date, default: null },
+    lastReactivatedAt: { type: Date, default: null },
+    accountDeletionToken: { type: String, default: null },
+    accountDeletionTokenExpiresAt: { type: Date, default: null },
+    accountDeletionTokenRequestedAt: { type: Date, default: null },
 
     // Stripe subscription details
     stripeCustomerId: { type: String, default: "" },

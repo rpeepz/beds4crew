@@ -128,6 +128,45 @@ const emailTemplates = {
     `,
   }),
 
+  accountReactivation: (firstName, reactivationToken) => ({
+    subject: "Reactivate Your Beds4Crew Account",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #1976d2;">Reactivate Your Account</h1>
+        <p>Hi ${firstName},</p>
+        <p>Your account is currently disabled. If you want to re-enable it, use the secure link below:</p>
+        <p style="margin-top: 30px;">
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/reactivate-account?token=${reactivationToken}" 
+             style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            Reactivate Account
+          </a>
+        </p>
+        <p style="color: #666; margin-top: 30px;">This link expires in 30 minutes.</p>
+        <p style="color: #666;">If you did not request reactivation, you can ignore this email.</p>
+      </div>
+    `,
+  }),
+
+  accountDeletion: (firstName, deletionToken) => ({
+    subject: "Confirm Account Deletion",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #d32f2f;">Confirm Account Deletion</h1>
+        <p>Hi ${firstName},</p>
+        <p>We received a request to permanently delete your Beds4Crew account.</p>
+        <p>Deletion is irreversible. If you want to proceed, confirm using the secure link below:</p>
+        <p style="margin-top: 30px;">
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/confirm-delete-account?token=${deletionToken}" 
+             style="background-color: #d32f2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            Confirm Permanent Deletion
+          </a>
+        </p>
+        <p style="color: #666; margin-top: 30px;">This link expires in 30 minutes.</p>
+        <p style="color: #666;">If you did not request this, ignore this email and your account will remain unchanged.</p>
+      </div>
+    `,
+  }),
+
   // Booking confirmation (for guest)
   bookingConfirmation: (guestName, propertyTitle, startDate, endDate, totalPrice, bookingId) => ({
     subject: `Booking Confirmed: ${propertyTitle}`,
@@ -240,6 +279,16 @@ const emailService = {
 
   sendPasswordChangedEmail: async (email, firstName) => {
     const template = emailTemplates.passwordChanged(firstName);
+    return sendEmail({ to: email, ...template });
+  },
+
+  sendAccountReactivationEmail: async (email, firstName, reactivationToken) => {
+    const template = emailTemplates.accountReactivation(firstName, reactivationToken);
+    return sendEmail({ to: email, ...template });
+  },
+
+  sendAccountDeletionEmail: async (email, firstName, deletionToken) => {
+    const template = emailTemplates.accountDeletion(firstName, deletionToken);
     return sendEmail({ to: email, ...template });
   },
 

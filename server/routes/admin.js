@@ -8,6 +8,7 @@ const Review = require("../models/Review");
 const cache = require("../utils/cache");
 const verifyToken = require("../middleware/auth");
 const { verifyAdmin } = require("../middleware/auth");
+const { deleteUserCascade } = require("../utils/deleteUser");
 const router = express.Router();
 
 const publishApprovedReviewToUser = async (reviewDoc) => {
@@ -189,13 +190,10 @@ router.put("/users/:userId", verifyToken, verifyAdmin, async (req, res) => {
 // Delete user
 router.delete("/users/:userId", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
+    await deleteUserCascade(req.params.userId);
     res.json({ message: "User deleted successfully" });
   } catch (error) {
+    if (error.statusCode === 404) return res.status(404).json({ message: "User not found" });
     res.status(500).json({ message: "Failed to delete user", error: error.message });
   }
 });

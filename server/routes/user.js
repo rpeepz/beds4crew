@@ -1,10 +1,33 @@
 const express = require("express");
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
+const { deleteUserCascade } = require("../utils/deleteUser");
+const {
+  clearAuthCookies,
+  generateTokens,
+  setAuthCookies,
+  generateCsrfToken,
+  setCsrfCookie,
+  isAppAuthModeRequest,
+} = require("../utils/tokenHelpers");
 const User = require("../models/User");
 const Property = require("../models/Property");
 const Review = require("../models/Review");
+const RefreshToken = require("../models/RefreshToken");
+const emailService = require("../utils/emailService");
 const verifyToken = require("../middleware/auth");
 const cache = require("../utils/cache");
 const router = express.Router();
+
+const REACTIVATION_HOLD_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const ACCOUNT_DELETION_TOKEN_TTL_MS = 30 * 60 * 1000;
+const ACCOUNT_DELETION_REQUEST_COOLDOWN_MS = 60 * 1000;
+
+const createAccountDeletionToken = () => {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+  return { rawToken, hashedToken };
+};
 
 // Toggle user role between guest and host
 router.put("/toggle-role", verifyToken, async (req, res) => {
@@ -229,4 +252,131 @@ router.get("/:userId/review-stats", async (req, res) => {
   }
 });
 
+
+router.post("/me/request-delete", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("+password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ message: "Password is required" });
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) return res.status(401).json({ message: "Incorrect password" });
+
+    const now = Date.now();
+    const lastRequestedAt = user.accountDeletionTokenRequestedAt
+      ? new Date(user.accountDeletionTokenRequestedAt).getTime()
+      : 0;
+
+    if (lastRequestedAt && now - lastRequestedAt < ACCOUNT_DELETION_REQUEST_COOLDOWN_MS) {
+      const waitSeconds = Math.ceil((ACCOUNT_DELETION_REQUEST_COOLDOWN_MS - (now - lastRequestedAt)) / 1000);
+      return res.status(429).json({ message: `Please wait ${waitSeconds}s before requesting another deletion email.` });
+    }
+
+    const { rawToken, hashedToken } = createAccountDeletionToken();
+    user.accountDeletionToken = hashedToken;
+    user.accountDeletionTokenExpiresAt = new Date(now + ACCOUNT_DELETION_TOKEN_TTL_MS);
+    user.accountDeletionTokenRequestedAt = new Date(now);
+    await user.save();
+
+    await emailService.sendAccountDeletionEmail(user.email, user.firstName, rawToken);
+
+    return res.status(200).json({ message: "Deletion confirmation email sent. The link expires in 30 minutes." });
+  } catch (error) {
+    console.error("[User] Request delete account error:", error.message);
+    return res.status(500).json({ message: "Failed to start account deletion" });
+  }
+});
+
+router.post("/confirm-delete", async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) {
+      return res.status(400).json({ message: "Deletion token is required" });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      accountDeletionToken: hashedToken,
+      accountDeletionTokenExpiresAt: { $gt: new Date() },
+    }).select("_id");
+
+    if (!user) {
+      return res.status(400).json({ message: "This deletion link is invalid or has expired." });
+    }
+
+    await deleteUserCascade(user._id);
+    clearAuthCookies(res);
+    return res.status(200).json({ message: "Account deleted successfully." });
+  } catch (error) {
+    console.error("[User] Confirm delete account error:", error.message);
+    return res.status(500).json({ message: "Failed to delete account" });
+  }
+});
+
+router.post("/me/deactivate", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("+password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { password } = req.body || {};
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
+
+    const now = new Date();
+    user.isActive = false;
+    user.accountDisabledAt = now;
+    user.reactivationEligibleAt = new Date(now.getTime() + REACTIVATION_HOLD_WINDOW_MS);
+    user.reactivationToken = null;
+    user.reactivationTokenExpiresAt = null;
+    user.reactivationTokenRequestedAt = null;
+    await user.save();
+
+    const { accessToken, refreshToken } = generateTokens(user);
+    await RefreshToken.deleteMany({ userId: user._id });
+    await new RefreshToken({
+      userId: user._id,
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    }).save();
+
+    setAuthCookies(res, accessToken, refreshToken);
+    const csrfToken = generateCsrfToken();
+    setCsrfCookie(res, csrfToken);
+
+    const isAppAuthRequest = isAppAuthModeRequest(req);
+
+    return res.json({
+      message: "Account disabled. You can request reactivation after 30 days.",
+      csrfToken,
+      ...(isAppAuthRequest ? { accessToken, refreshToken } : {}),
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImagePath: user.profileImagePath,
+        hasPaid: user.hasPaid,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionCurrentPeriodEnd: user.subscriptionCurrentPeriodEnd,
+        isActive: false,
+        accountDisabledAt: user.accountDisabledAt,
+        reactivationEligibleAt: user.reactivationEligibleAt,
+      },
+    });
+  } catch (error) {
+    console.error("[User] Deactivate account error:", error.message);
+    return res.status(500).json({ message: "Failed to deactivate account" });
+  }
+});
 module.exports = router;

@@ -30,6 +30,8 @@ const csrfExemptPaths = new Set([
   "/api/auth/csrf",
   "/api/auth/password/request-reset",
   "/api/auth/password/confirm-reset",
+  "/api/auth/reactivation/confirm",
+  "/api/users/confirm-delete",
   "/api/billing/webhook",
 ]);
 

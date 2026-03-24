@@ -1,5 +1,19 @@
 const jwt = require("jsonwebtoken");
 const { ACCESS_COOKIE_NAME, parseBearerToken, getJwtSecrets } = require("../utils/tokenHelpers");
+const User = require("../models/User");
+
+const DISABLED_ACCOUNT_ALLOWED_PATH_PREFIXES = [
+  "/api/auth/me",
+  "/api/auth/logout",
+  "/api/auth/refresh",
+  "/api/auth/reactivation/request",
+  "/api/tickets",
+];
+
+const isDisabledAccountAllowedPath = (req) => {
+  const fullPath = (req.originalUrl || req.path || "").split("?")[0];
+  return DISABLED_ACCOUNT_ALLOWED_PATH_PREFIXES.some((prefix) => fullPath.startsWith(prefix));
+};
 
 const parseEnvList = (value = "") =>
   value
@@ -22,7 +36,7 @@ const isAllowlistedAdmin = (user = {}) => {
   );
 };
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeaderToken = parseBearerToken(req.headers["authorization"]);
   const cookieToken = req.cookies?.[ACCESS_COOKIE_NAME];
   const tokenCandidates = [
@@ -38,8 +52,30 @@ const verifyToken = (req, res, next) => {
   for (const candidate of tokenCandidates) {
     try {
       const decoded = jwt.verify(candidate.token, accessSecret);
-      req.user = decoded;
+      const user = await User.findById(decoded.id)
+        .select("_id email role isActive accountDisabledAt reactivationEligibleAt")
+        .lean();
+
+      if (!user) {
+        continue;
+      }
+
+      req.user = {
+        ...decoded,
+        isActive: user.isActive !== false,
+      };
+      req.userAccount = user;
       req.authTokenSource = candidate.source;
+
+      if (user.isActive === false && !isDisabledAccountAllowedPath(req)) {
+        return res.status(423).json({
+          message: "Account is disabled. Use the reactivation flow to restore access.",
+          code: "ACCOUNT_DISABLED",
+          reactivationEligibleAt: user.reactivationEligibleAt || null,
+          accountDisabledAt: user.accountDisabledAt || null,
+        });
+      }
+
       return next();
     } catch (error) {
     }

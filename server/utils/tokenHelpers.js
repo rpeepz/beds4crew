@@ -108,6 +108,9 @@ const generateTokens = (user) => {
     firstName: user.firstName,
     lastName: user.lastName,
     profileImagePath: user.profileImagePath,
+    isActive: user.isActive !== false,
+    accountDisabledAt: user.accountDisabledAt || null,
+    reactivationEligibleAt: user.reactivationEligibleAt || null,
   };
 
   // Access token - short lived (15 minutes)
