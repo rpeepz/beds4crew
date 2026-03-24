@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Snackbar, Alert, Box, IconButton, Tooltip } from "@mui/material";
+import { Snackbar, Alert, Box, IconButton, Tooltip, Button } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import NotificationsOffOutlinedIcon from "@mui/icons-material/NotificationsOffOutlined";
 import { notificationService } from "../utils/notificationService";
 
@@ -73,6 +74,67 @@ export function SnackbarProvider({ children }) {
   const [duration, setDuration] = useState(DEFAULT_DURATION);
   const [action, setAction] = useState(null);
 
+  // Helper function to render action elements
+  const renderActionElement = (actionConfig) => {
+    if (!actionConfig) return null;
+
+    // If it's already a React element, return it
+    if (React.isValidElement(actionConfig)) {
+      return actionConfig;
+    }
+
+    // If it's an object with configuration
+    if (typeof actionConfig === "object") {
+      const { label, onClick, href, type = "button" } = actionConfig;
+      if (type === "link" && href) {
+        // Internal link navigation
+        if (href.startsWith("/")) {
+          return (
+            <Button
+              component={RouterLink}
+              to={href}
+              size="small"
+              color="inherit"
+              sx={{ textDecoration: "none", fontWeight: 600 }}
+            >
+              {label}
+            </Button>
+          );
+        }
+        // External link
+        return (
+          <Button
+            component="a"
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="small"
+            color="inherit"
+            sx={{ fontWeight: 600 }}
+          >
+            {label}
+          </Button>
+        );
+      }
+
+      // Regular button with onClick handler
+      if (type === "button" && onClick) {
+        return (
+          <Button
+            onClick={onClick}
+            size="small"
+            color="inherit"
+            sx={{ fontWeight: 600 }}
+          >
+            {label}
+          </Button>
+        );
+      }
+    }
+
+    return null;
+  };
+
   const triggerSnackbar = (message, sev = "success", options = {}) => {
     if (snackbarMuted && !options?.force) return;
 
@@ -107,7 +169,7 @@ export function SnackbarProvider({ children }) {
 
   const mergedAction = (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      {action}
+      {renderActionElement(action)}
       <Tooltip title="Disable snacks" placement="top" arrow>
         <IconButton
           size="small"
@@ -129,9 +191,8 @@ export function SnackbarProvider({ children }) {
         autoHideDuration={duration}
         onClose={handleClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        action={mergedAction}
       >
-        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%" }}>
+        <Alert onClose={handleClose} severity={severity} sx={{ width: "100%" }} action={mergedAction}>
           {msg}
         </Alert>
       </Snackbar>
