@@ -15,12 +15,17 @@ import {
   Switch,
   FormControlLabel,
   FormGroup,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
   Alert,
 } from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useSnackbar } from "../components/AppSnackbar";
-import { fetchWithAuth, fetchJson, fetchJsonWithAuth, getStoredUser, setStoredUser, API_URL, isAppTransportMode } from "../utils/api";
+import { fetchWithAuth, fetchJson, fetchJsonWithAuth, getStoredUser, setStoredUser, API_URL, isAppTransportMode, logout } from "../utils/api";
 import { commonStyles } from "../utils/styleConstants";
 import { scrollElementIntoViewWithOffset } from "../utils/scroll";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -73,6 +78,10 @@ export default function ProfilePage() {
     averageRating: null,
     reviewCount: 0,
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const snackbar = useSnackbar();
   // Detect if running inside iOS native app
   const isIosNative = (() => {
@@ -460,6 +469,60 @@ export default function ProfilePage() {
       snackbar(error.message || "Failed to sync subscription", "error");
     } finally {
       setBillingLoading(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (!deletePassword.trim()) {
+      setDeleteError("Please enter your password");
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError("");
+      const data = await fetchJsonWithAuth(`${API_URL}/users/me/deactivate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      if (data?.user) {
+        setStoredUser(data.user);
+      }
+
+      snackbar(data?.message || "Account disabled", "success");
+      setDeleteDialogOpen(false);
+      navigate("/account-disabled", { replace: true });
+    } catch (error) {
+      setDeleteError(error.message || "Failed to disable account");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword.trim()) {
+      setDeleteError("Please enter your password");
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError("");
+      const data = await fetchJsonWithAuth(`${API_URL}/users/me/request-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      snackbar(data?.message || "Deletion confirmation email sent.", "success");
+      setDeleteDialogOpen(false);
+      setDeletePassword("");
+      setDeleteError("");
+    } catch (error) {
+      setDeleteError(error.message || "Failed to request account deletion");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -923,6 +986,56 @@ export default function ProfilePage() {
               />
             </FormGroup>
           </Card>
+          {/* Danger Zone */}
+          <Card sx={{ p: 3, borderRadius: 3, maxWidth: 520, border: "1px solid #d0d0d0", backgroundColor: "#fafafa" }}>
+            <Typography id="danger-zone" ref={settingsTabRef} variant="h6" sx={{ fontWeight: 700, mb: 1, color: "#666" }}>
+              Danger Zone
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Disable account access now and request reactivation after a 30-day hold period. For permanent removal, use Delete Account.
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={() => { setDeleteDialogOpen(true); setDeleteError(""); setDeletePassword(""); }}
+              sx={{ color: "#777", borderColor: "#bbb", backgroundColor: "#f0f0f0", "&:hover": { borderColor: "#999", backgroundColor: "#e8e8e8" } }}
+            >
+              Deactivate Account
+            </Button>
+          </Card>
+
+          <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
+            <DialogTitle>Deactivate your account?</DialogTitle>
+            <DialogContent>
+              <DialogContentText sx={{ mb: 2 }}>
+                This disables your account immediately. Access will be blocked until reactivation, and re-enable is only available after 30 days via email token confirmation.
+              </DialogContentText>
+              <DialogContentText sx={{ mb: 2 }}>
+                Permanent deletion requires email confirmation. We will send a 30-minute secure deletion link to your email address.
+              </DialogContentText>
+              <TextField
+                fullWidth
+                label="Confirm your password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                autoFocus
+              />
+              {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
+                <Button variant="contained" color="warning" onClick={handleDeactivateAccount} disabled={deleteLoading} fullWidth>
+                  {deleteLoading ? "Working..." : "Deactivate"}
+                </Button>
+                <Button size="small" color="error" onClick={handleDeleteAccount} disabled={deleteLoading}>
+                  Request Delete Email
+                </Button>
+                <Button variant="text" onClick={() => setDeleteDialogOpen(false)} disabled={deleteLoading}>
+                  Cancel
+                </Button>
+              </Box>
+            </DialogActions>
+          </Dialog>
         </Box>
       )}
     </Box>

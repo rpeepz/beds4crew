@@ -33,9 +33,10 @@ export default function SupportPage() {
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     setUser(storedUser);
+    const isDisabledAccount = storedUser?.isActive === false;
     
     // Load email preferences
-    if (storedUser.id) {
+    if (storedUser.id && !isDisabledAccount) {
       fetchWithAuth(`${API_URL}/email-preferences`)
         .then(res => res.json())
         .then(prefs => {
@@ -100,10 +101,28 @@ export default function SupportPage() {
     const hashSlug = decodeURIComponent(location.hash.replace("#", ""));
     if (!hashSlug) return;
 
+    if (hashSlug === "faq") {
+      setFaqSectionOpen(true);
+      setExpandedFaq(null);
+      requestAnimationFrame(() => {
+        const faqSection = document.getElementById("faq");
+        scrollElementIntoViewWithOffset(faqSection, { extraOffset: 16 });
+      });
+      return;
+    }
+
     if (hashSlug.startsWith("faq-")) {
       const faqSlug = hashSlug.replace("faq-", "");
       const faqExists = supportFaqs.some((faq) => faq.slug === faqSlug);
-      if (!faqExists) return;
+      if (!faqExists) {
+        setFaqSectionOpen(true);
+        setExpandedFaq(null);
+        requestAnimationFrame(() => {
+          const faqSection = document.getElementById("faq");
+          scrollElementIntoViewWithOffset(faqSection, { extraOffset: 16 });
+        });
+        return;
+      }
 
       setFaqSectionOpen(true);
       setExpandedFaq(faqSlug);
@@ -190,7 +209,7 @@ export default function SupportPage() {
         <Card sx={{ mb: 4, borderRadius: 3 }}>
           <CardContent>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              <Typography id="faq" variant="h6" sx={{ fontWeight: 700 }}>
                 Frequently Asked Questions
               </Typography>
               <Button size="small" onClick={() => setFaqSectionOpen(prev => !prev)}>

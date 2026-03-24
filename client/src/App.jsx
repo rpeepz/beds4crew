@@ -10,7 +10,7 @@ import { SnackbarProvider } from "./components/AppSnackbar";
 import NavigationDrawer from "./components/NavigationDrawer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
-import { clearTokens, fetchJsonWithAuth, getStoredUser, isAppTransportMode, setStoredUser, API_URL } from "./utils/api";
+import { clearTokens, fetchJsonWithAuth, getAccessToken, getStoredUser, isAppTransportMode, setStoredUser, API_URL } from "./utils/api";
 import { SUPPORT_INTERNAL_PATHS } from "./data/supportTopics";
 import { useThemeMode } from "./contexts/ThemeContext";
 
@@ -33,6 +33,9 @@ const SupportResourcePage = lazy(() => import('./pages/SupportResourcePage'));
 const SupportChatPage = lazy(() => import('./pages/SupportChatPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
+const DisabledAccountPage = lazy(() => import('./pages/DisabledAccountPage'));
+const ReactivateAccountPage = lazy(() => import('./pages/ReactivateAccountPage'));
+const ConfirmDeleteAccountPage = lazy(() => import('./pages/ConfirmDeleteAccountPage'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -76,6 +79,29 @@ const RouteChangeEffects = () => {
   }, [location.pathname, location.search]);
 
   return null;
+};
+
+const DISABLED_ACCOUNT_PATH = "/account-disabled";
+const REACTIVATE_ACCOUNT_PATH = "/reactivate-account";
+const CONFIRM_DELETE_ACCOUNT_PATH = "/confirm-delete-account";
+
+const DisabledAccountGuard = ({ children }) => {
+  const location = useLocation();
+  const accessToken = getAccessToken();
+  const user = getStoredUser();
+  const isDisabledAccount = Boolean(accessToken) && user?.isActive === false;
+  const supportPaths = ["/support", "/support/chat", ...SUPPORT_INTERNAL_PATHS];
+  const onSupportPath = supportPaths.includes(location.pathname);
+  const onAllowedPath = location.pathname === DISABLED_ACCOUNT_PATH
+    || location.pathname === REACTIVATE_ACCOUNT_PATH
+    || location.pathname === CONFIRM_DELETE_ACCOUNT_PATH
+    || onSupportPath;
+
+  if (isDisabledAccount && !onAllowedPath) {
+    return <Navigate to={DISABLED_ACCOUNT_PATH} replace />;
+  }
+
+  return children;
 };
 
 function App() {
@@ -146,6 +172,9 @@ function App() {
               lastName: data.lastName,
               profileImagePath: data.profileImagePath,
               hasPaid: data.hasPaid,
+              isActive: data.isActive !== false,
+              accountDisabledAt: data.accountDisabledAt || null,
+              reactivationEligibleAt: data.reactivationEligibleAt || null,
               phone: data.phone,
               bio: data.bio,
               isAdmin: !!data.isAdmin,
@@ -295,32 +324,37 @@ function App() {
             )}
             <RouteChangeEffects />
             <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                <Route path="/register" element={<PublicRoute> <RegisterPage /> </PublicRoute>} />
-                <Route path="/login" element={<PublicRoute> <LoginPage /> </PublicRoute>} />
-                <Route path="/forgot-password" element={<PublicRoute> <ForgotPasswordPage /> </PublicRoute>} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                <Route path="/pricing" element={<ProtectedRoute><PricingPage /></ProtectedRoute>} />
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/add-property" element={<ProtectedRoute requiredRole="host"> <AddPropertyPage /> </ProtectedRoute>} />
-                <Route path="/properties" element={<PropertyFeedPage />} />
-                <Route path="/browse" element={<BrowsePage />} />
-                <Route path="/property/:id" element={<PropertyDetailPage />} />
-                <Route path="/trips" element={<ProtectedRoute requiredRole="guest"> <TripListPage /> </ProtectedRoute>} />
-                <Route path="/my-listings" element={<ProtectedRoute requiredRole="host"> <Navigate to="/profile?tab=listings#listings-tab" replace /> </ProtectedRoute>} />
-                <Route path="/favorites" element={<ProtectedRoute> <Navigate to="/profile?tab=favorites#favorites-tab" replace /> </ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute> <Navigate to="/profile?tab=settings#settings-tab" replace /> </ProtectedRoute>} />
-                <Route path="/reservations" element={<ProtectedRoute requiredRole="host"> <ReservationListPage /> </ProtectedRoute>} />
-                <Route path="/review/:token" element={<ProtectedRoute> <ReviewPage /> </ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute> <ProfilePage /> </ProtectedRoute>} />
-                <Route path="/support" element={<SupportPage />} />
-                <Route path="/support/chat" element={<SupportChatPage />} />
-                {SUPPORT_INTERNAL_PATHS.map((path) => (
-                  <Route key={path} path={path} element={<SupportResourcePage />} />
-                ))}
-                <Route path="/admin" element={<ProtectedRoute> <AdminPage /> </ProtectedRoute>} />
-                <Route path="*" element={<Navigate to="/login" />} />
-              </Routes>
+              <DisabledAccountGuard>
+                <Routes>
+                  <Route path="/register" element={<PublicRoute> <RegisterPage /> </PublicRoute>} />
+                  <Route path="/login" element={<PublicRoute> <LoginPage /> </PublicRoute>} />
+                  <Route path="/forgot-password" element={<PublicRoute> <ForgotPasswordPage /> </PublicRoute>} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/reactivate-account" element={<ReactivateAccountPage />} />
+                  <Route path="/confirm-delete-account" element={<ConfirmDeleteAccountPage />} />
+                  <Route path="/account-disabled" element={<ProtectedRoute> <DisabledAccountPage /> </ProtectedRoute>} />
+                  <Route path="/pricing" element={<ProtectedRoute><PricingPage /></ProtectedRoute>} />
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/add-property" element={<ProtectedRoute requiredRole="host"> <AddPropertyPage /> </ProtectedRoute>} />
+                  <Route path="/properties" element={<PropertyFeedPage />} />
+                  <Route path="/browse" element={<BrowsePage />} />
+                  <Route path="/property/:id" element={<PropertyDetailPage />} />
+                  <Route path="/trips" element={<ProtectedRoute requiredRole="guest"> <TripListPage /> </ProtectedRoute>} />
+                  <Route path="/my-listings" element={<ProtectedRoute requiredRole="host"> <Navigate to="/profile?tab=listings#listings-tab" replace /> </ProtectedRoute>} />
+                  <Route path="/favorites" element={<ProtectedRoute> <Navigate to="/profile?tab=favorites#favorites-tab" replace /> </ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute> <Navigate to="/profile?tab=settings#settings-tab" replace /> </ProtectedRoute>} />
+                  <Route path="/reservations" element={<ProtectedRoute requiredRole="host"> <ReservationListPage /> </ProtectedRoute>} />
+                  <Route path="/review/:token" element={<ProtectedRoute> <ReviewPage /> </ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute> <ProfilePage /> </ProtectedRoute>} />
+                  <Route path="/support" element={<SupportPage />} />
+                  <Route path="/support/chat" element={<SupportChatPage />} />
+                  {SUPPORT_INTERNAL_PATHS.map((path) => (
+                    <Route key={path} path={path} element={<SupportResourcePage />} />
+                  ))}
+                  <Route path="/admin" element={<ProtectedRoute> <AdminPage /> </ProtectedRoute>} />
+                  <Route path="*" element={<Navigate to="/login" />} />
+                </Routes>
+              </DisabledAccountGuard>
             </Suspense>
             <Snackbar
               open={showCookieNotice}
