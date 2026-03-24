@@ -43,6 +43,9 @@ class Cache {
 const cache = new Cache();
 
 // Run cleanup every 5 minutes
-setInterval(() => cache.cleanup(), 5 * 60 * 1000);
+const cleanupInterval = setInterval(() => cache.cleanup(), 5 * 60 * 1000);
+if (typeof cleanupInterval.unref === "function") {
+  cleanupInterval.unref();
+}
 
 module.exports = cache;
