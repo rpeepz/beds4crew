@@ -1,6 +1,6 @@
 {
   "name": "beds4crew-server",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Backend for Beds4Crew - Property rental platform for crews",
   "main": "index.js",
   "scripts": {
